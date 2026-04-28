@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Nexus Dispatch | Professional CAD simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 30%, #0B1219, #050A10);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Roboto', sans-serif;
+            padding: 28px 32px;
+            min-height: 100vh;
+            color: #EDF4FF;
+        }
+
+        /* header area */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .badge-system {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logo {
+            background: #0F2128;
+            padding: 8px 20px;
+            border-radius: 18px; /* lightly rounded */
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(0, 188, 212, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .logo h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #B2EBF2, #4DD0E1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .logo span {
+            font-size: 0.7rem;
+            color: #7F8FA4;
+            letter-spacing: 0.5px;
+        }
+        .status-badge {
+            background: #0F1A1F;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-weight: 500;
+            border-left: 3px solid #26C6DA;
+            font-family: monospace;
+        }
+        .clock {
+            font-family: 'JetBrains Mono', monospace;
+            background: #0A1117;
+            padding: 8px 20px;
+            border-radius: 28px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            border: 1px solid #2C3E44;
+        }
+
+        /* GRID: 2 columns with sharp rounded corners */
+        .dispatch-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 28px;
+        }
+
+        /* card design - sharp but gently radius (12px to 18px consistency) */
+        .card {
+            background: rgba(15, 25, 30, 0.75);
+            backdrop-filter: blur(2px);
+            border-radius: 20px;    /* lightly rounded but crisp */
+            border: 1px solid rgba(72, 187, 194, 0.2);
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+        .card-hearder {
+            padding: 18px 24px;
+            background: rgba(5, 15, 20, 0.7);
+            border-bottom: 1px solid #1E3A3F;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .card-header h2 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-header h2 i {
+            font-size: 1.3rem;
+        }
+        .card-body {
+            padding: 20px 24px;
+        }
+
+        /* Unit grid (modern tiles) */
+        .units-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .unit-tile {
+            background: #0E1920;
+            border-radius: 18px;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            transition: all 0.15s;
+            border: 1px solid #233B42;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        .unit-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .unit-name {
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: -0.2px;
+        }
+        .unit-badge {
+            font-size: 0.7rem;
+            color: #9BB7C9;
+            background: #071016;
+            padding: 2px 8px;
+            border-radius: 30px;
+            width: fit-content;
+        }
+        .status-chip {
+            font-weight: 600;
+            font-size: 0.7rem;
+            padding: 4px 12px;
+            border-radius: 40px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .status-available { background: #1B5E20; color: #C8E6C9; border-left: 2px solid #4CAF50; }
+        .status-enroute { background: #B26A00; color: #FFF3E0; border-left: 2px solid #FFB74D; }
+        .status-onscene { background: #0D47A1; color: #BBDEFB; border-left: 2px solid #42A5F5; }
+        .status-outofservice { background: #4A4E5C; color: #E0E0E0; border-left: 2px solid #9E9E9E; }
+        .action-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn-sm {
+            background: #1E3B40;
+            border: none;
+            color: #CFE7E8;
+            padding: 6px 12px;
+            border-radius: 34px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.1s linear;
+            font-family: inherit;
+        }
+        .btn-sm:hover {
+            background: #2F5E66;
+            color: white;
+            transform: translateY(-1px);
+        }
+        .btn-primary {
+            background: #007c8c;
+            color: white;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        .btn-primary:hover {
+            background: #0097a7;
+        }
+
+        /* incident list */
+        .incident-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 520px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .incident-card {
+            background: #0D181F;
+            border-radius: 18px;
+            padding: 16px;
+            border-left: 5px solid;
+            transition: 0.1s;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        .priority-high { border-left-color: #E53935; background: linear-gradient(97deg, #0F1D22, #0C161C); }
+        .priority-medium { border-left-color: #FFA726; }
+        .priority-low { border-left-color: #43A047; }
+        .incident-details {
+            flex: 2;
+        }
+        .incident-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .incident-loc {
+            color: #AAD4DB;
+        }
+        .incident-meta {
+            font-size: 0.7rem;
+            color: #8DA3B3;
+            margin-top: 6px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .btn-incident {
+            background: #1F4149;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 34px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: #EFF7FA;
+            transition: 0.1s;
+        }
+        .btn.incident:hover {
+            background: #2F6F7A;
+        }
+        .btn-warning {
+            background: #9C4D3A;
+        }
+        .btn-warning:hover {
+            background: #B95F48;
+        }
+
+        /* suggestion panel */
+        .suggestion-panel {
+            margin-top: 24px;
+            background: #0C1920;
+            border-radius: 18px;
+            padding: 14px 18px;
+            border: 1px solid #2A5F68;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .form-incline {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .form-incline input, .form-incline select {
+            background: #0C1920;
+            border: 1px solid #2C5A64;
+            padding: 10px 16px;
+            border-radius: 34px;
+            color: #EFFAFF;
+            font-family: inherit;
+            flex: 1;
+            outline: none;
+        }
+        .form-incline input:focus, .form-incline select:focus {
+            border-color: #4DD0E1;
+        }
+        hr {
+            margin: 16px 0;
+            border-color: #1F454E;
+        }
+        .log-area {
+            font-size: 0.7rem;
+            font-family: monospace;
+            color: #7AAEB8;
+        }
+
+        ::-webkit-scrollar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #051016;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2E6A74;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 850px) {
+            body { padding: 16px; }
+            .dispatch-grid { grid-template-columns: 1fr; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <div class="top-bar">
+        <div class="badge-system">
+            <div class="logo">
+                <h1>NEXUS DISPATCH</h1>
+                <span>CAD SIMULATOR | CJIS-STYLE LOGIC</span>
+            </div>
+            <div class="status-badge">SECURE CONNECTION | MOCK ENV</div>
+        </div>
+        <div class="clock" id="liveClock">--:--:--</div>
+    </div>
+
+    <div class="dispatch-grid">
+        <!-- LEFT: UNITS PANEL -->
+         <div class="card">
+            <div class="card-header">
+                <h2>PATROL UNITS <span style="font-size:0.7rem;">&nbsp;• ACTIVE STATUS</span></h2>
+                <span class="status-badge" id="availableCount">0 available</span>
+            </div>
+            <div class="card-body">
+                <div id="unitsContainer" class="units-grid">
+                    <!-- dynamic units injected -->
+                </div>
+                <!-- intelligent suggestion area -->
+                 <div id="smartSuggestion" class="suggestion-panel">
+                    Dispatch AI: Select incident to suggest closest unit
+                 </div>
+            </div>
+         </div>
+
+         <!-- RIGHT: INCEDENTS AND DISPATCH ACTIONS -->
+          <div class="card">
+            <div class="card-header">
+                <h2>LIVE INCIDENTS</h2>
+                <button id="quickNewDemoBtn" class="btn-sm btn-primary" style="background:#2F6470;">+ DEMO INCEDENT</button>
+            </div>
+            <div class="card-body">
+                <div id="incidentsContainer" class="incident-list">
+                    <!-- incident cards -->
+                </div>
+                <hr>
+                <div style="margin-top: 4px;">
+                    <div style="font-weight:500; margin-bottom: 8px;">+ CREATE INCIDENT (MOCK)</div>
+                    <div class="form-incline">
+                        <input type="text" id="incidentLocation" placeholder="Location (e.g., 'Harbor & 12th')" value="Civic Center Plaza">
+                        <select id="incidentPriority">
+                            <option value="high">🔴 CRITICAL / HIGH</option>
+                            <option value="medium">🟠 MODERATE / MEDIUM</option>
+                            <option value="low">🟢 LOW / ROUTINE</option>
+                        </select>
+                        <button id="createIncidentBtn" class="btn-sm btn-primary" style="background:#00758c;">DISPATCH NEW</button>
+                    </div>
+                </div>
+<div class="log-area" id="systemMessage" style="margin-top: 18px;">
+                    ⚡ Ready | Simulated closest-unit algorithm active
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // PROFESSIONAL MOCK DISPATCH WITH SHARP ROUNDED EDGES & LOGIC
+    // --------------------------------------------------------------
+    
+    // ---------- MOCK GPS DATABASE (SF simulation) ----------
+    const unitsData = [
+        { id: "E-241", name: "Sgt. Vasquez", status: "available", lat: 37.7749, lng: -122.4194, beat: "CENTRAL" },
+        { id: "M-809", name: "Ofc. Park",    status: "available", lat: 37.7695, lng: -122.4130, beat: "MISSION" },
+        { id: "K-117", name: "Ofc. Reyes",   status: "enroute",  lat: 37.7800, lng: -122.4300, beat: "NOBE" },
+        { id: "T-554", name: "Ofc. Delgado", status: "outofservice", lat: 37.7660, lng: -122.4250, beat: "SOMA" },
+        { id: "R-972", name: "Det. Chen",    status: "available", lat: 37.7820, lng: -122.4090, beat: "WHARF" },
+        { id: "D-301", name: "Ofc. Kowalski",status: "available", lat: 37.7712, lng: -122.4410, beat: "WEST ADD" }
+    ];
+
+    let units = JSON.parse(JSON.stringify(unitsData));
+
+    // incidents store
+    let incidents = [
+        { id: "CAD-101", location: "Market & 8th", priority: "high", assignedUnitId: null, timestamp: new Date(Date.now() - 420000), status: "pending", latlng: { lat: 37.7780, lng: -122.4120 } },
+        { id: "CAD-102", location: "Golden Gate Park", priority: "low", assignedUnitId: "E-241", timestamp: new Date(Date.now() - 180000), status: "assigned", latlng: { lat: 37.7690, lng: -122.4830 } }
+    ];
+
+    // helper: distance (simulated relative)
+    function getDistance(lat1, lng1, lat2, lng2) {
+        const dx = (lat1 - lat2) * 105;
+        const dy = (lng1 - lng2) * 85;
+        return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    // Generate lat/lng based on location name (consistent mock mapping)
+    function getLocationCoords(location) {
+        const map = {
+            "Civic Center Plaza": { lat: 37.7795, lng: -122.4180 },
+            "Harbor & 12th": { lat: 37.7620, lng: -122.3880 },
+            "Market & 8th": { lat: 37.7780, lng: -122.4120 },
+            "Golden Gate Park": { lat: 37.7690, lng: -122.4830 },
+            "Mission & 24th": { lat: 37.7525, lng: -122.4185 },
+            "Fisherman's Wharf": { lat: 37.8080, lng: -122.4170 },
+            "Bayview Station": { lat: 37.7320, lng: -122.3870 }
+        };
+        if (map[location]) return map[location];
+        // fallback dynamic hash (simple)
+        let hash = 0;
+        for(let i=0; i<location.length; i++) hash += location.charCodeAt(i);
+        return { lat: 37.770 + (hash % 10) * 0.002, lng: -122.420 + (hash % 8) * 0.003 };
+    }
+
+    // find closest available unit to coordinates
+    function findClosestAvailableUnit(targetLat, targetLng) {
+        const availableUnits = units.filter(u => u.status === "available");
+        if (availableUnits.length === 0) return null;
+        let closest = null;
+        let minDist = Infinity;
+        for (let u of availableUnits) {
+            let d = getDistance(u.lat, u.lng, targetLat, targetLng);
+            if (d < minDist) {
+                minDist = d;
+                closest = u;
+            }
+        }
+        return closest;
+    }
+
+    // assign unit to incident
+    function assignUnitToIncident(incidentId, unitId, autoDispatchMsg = true) {
+        const incident = incidents.find(i => i.id === incidentId);
+        const unit = units.find(u => u.id === unitId);
+        if (!incident || !unit) return false;
+        if (unit.status !== "available") {
+            systemNotify(`⚠️ Unit ${unit.id} is ${unit.status.toUpperCase()}. Cannot assign.`, "warning");
+            return false;
+        }
+        // if incident already assigned, free previous unit
+        if (incident.assignedUnitId) {
+            const oldUnit = units.find(u => u.id === incident.assignedUnitId);
+            if (oldUnit && (oldUnit.status === "enroute" || oldUnit.status === "onscene")) {
+                oldUnit.status = "available";
+            }
+        }
+        incident.assignedUnitId = unit.id;
+        incident.status = "assigned";
+        unit.status = "enroute";
+        systemNotify(`📢 DISPATCHED: ${unit.name} (${unit.id}) → ${incident.location} [${incident.priority.toUpperCase()}]`, "success");
+        renderAll();
+        return true;
+    }
+
+    // get suggested unit for incident
+    function getSuggestedForIncident(incident) {
+        let coords = incident.latlng;
+        if (!coords) {
+            coords = getLocationCoords(incident.location);
+            incident.latlng = coords;
+        }
+        return findClosestAvailableUnit(coords.lat, coords.lng);
+    }
+
+    // create new incident
+    function createIncident(location, priority) {
+        const newId = "CAD-" + Math.floor(100 + Math.random() * 899);
+        const coords = getLocationCoords(location);
+        const newIncident = {
+            id: newId,
+            location: location.trim(),
+            priority: priority,
+            assignedUnitId: null,
+            timestamp: new Date(),
+            status: "pending",
+            latlng: coords
+        };
+        incidents.unshift(newIncident);
+        systemNotify(`🆕 ${priority.toUpperCase()} incident created: ${location} (${newId})`, "info");
+        renderAll();
+        // auto-suggest in the suggestion panel
+        const suggested = getSuggestedForIncident(newIncident);
+        updateSuggestionPanel(newIncident, suggested);
+    }
+
+    // close incident (resolve)
+    function closeIncident(incidentId) {
+        const idx = incidents.findIndex(i => i.id === incidentId);
+        if (idx !== -1) {
+            const inc = incidents[idx];
+            if (inc.assignedUnitId) {
+                const unit = units.find(u => u.id === inc.assignedUnitId);
+                if (unit && (unit.status === "enroute" || unit.status === "onscene")) {
+                    unit.status = "available";
+                    systemNotify(`🔄 Unit ${unit.id} released (incident cleared).`, "info");
+                }
+            }
+            incidents.splice(idx, 1);
+            systemNotify(`✅ Incident ${incidentId} closed & archived.`, "info");
+            renderAll();
+        }
+    }
+
+    function unitArriveScene(unitId, incidentId = null) {
+        const unit = units.find(u => u.id === unitId);
+        if (!unit) return;
+        if (unit.status === "enroute") {
+            unit.status = "onscene";
+            systemNotify(`📍 ${unit.name} (${unit.id}) ARRIVED ON SCENE.`, "success");
+            renderAll();
+        } else if (unit.status === "onscene") {
+            systemNotify(`ℹ️ ${unit.name} already on scene.`, "info");
+        } else {
+            systemNotify(`⚠️ Unit must be ENROUTE to mark arrival.`, "warning");
+        }
+    }
+
+    function setUnitStatus(unitId, newStatus) {
+        const unit = units.find(u => u.id === unitId);
+        if (!unit) return;
+        const oldStatus = unit.status;
+        unit.status = newStatus;
+        if (newStatus === "available" && oldStatus !== "available") {
+            const assignedIncident = incidents.find(i => i.assignedUnitId === unitId);
+            if (assignedIncident) {
+                assignedIncident.assignedUnitId = null;
+                assignedIncident.status = "pending";
+                systemNotify(`🔄 ${unit.id} set to AVAILABLE → incident unassigned.`, "info");
+            }
+        }
+        if (newStatus === "outofservice" && (oldStatus === "enroute" || oldStatus === "onscene")) {
+            const assignedInc = incidents.find(i => i.assignedUnitId === unitId);
+            if (assignedInc) {
+                assignedInc.assignedUnitId = null;
+                assignedInc.status = "pending";
+                systemNotify(`⚠️ Unit taken out of service → incident ${assignedInc.id} unassigned.`, "warning");
+            }
+        }
+        renderAll();
+    }
+
+    function systemNotify(msg, type = "info") {
+        const logDiv = document.getElementById("systemMessage");
+        if (logDiv) {
+            const timeStr = new Date().toLocaleTimeString();
+            logDiv.innerHTML = `🕘 ${timeStr} | ${msg}<br>${logDiv.innerHTML.slice(0, 400)}`;
+        }
+        console.log(`[DISPATCH] ${msg}`);
+    }
+
+    function updateSuggestionPanel(incident, suggestedUnit) {
+        const panel = document.getElementById("smartSuggestion");
+        if (!incident) {
+            panel.innerHTML = `💡 No pending incident — add new to test closest-unit AI.`;
+            return;
+        }
+        if (suggestedUnit) {
+            panel.innerHTML = `🎯 NEXT INCIDENT: ${incident.location} (${incident.priority}) &nbsp;→  🚔 CLOSEST AVAILABLE: ${suggestedUnit.name} (${suggestedUnit.id}) 
+            <button id="quickSuggestAssignBtn" class="btn-sm btn-primary" style="background:#00897b;">⚡ ASSIGN SUGGESTION</button>`;
+            const btn = document.getElementById("quickSuggestAssignBtn");
+            if (btn) {
+                btn.onclick = () => {
+                    assignUnitToIncident(incident.id, suggestedUnit.id);
+                };
+            }
+        } else {
+            panel.innerHTML = `⚠️ NO AVAILABLE UNITS for ${incident.location} — consider marking units available.`;
+        }
+    }
+
+    // show recommendation for first pending incident
+    function refreshSuggestion() {
+        const pendingInc = incidents.find(i => i.status === "pending" && !i.assignedUnitId);
+        if (pendingInc) {
+            const suggested = getSuggestedForIncident(pendingInc);
+            updateSuggestionPanel(pendingInc, suggested);
+        } else {
+            const anyIncident = incidents[0];
+            if (anyIncident) {
+                const suggestedAny = getSuggestedForIncident(anyIncident);
+                updateSuggestionPanel(anyIncident, suggestedAny);
+            } else {
+                document.getElementById("smartSuggestion").innerHTML = `✅ No active incidents — system idle. Add a mock incident.`;
+            }
+        }
+    }
+
+    // count available units
+    function updateAvailableCount() {
+        const count = units.filter(u => u.status === "available").length;
+        const el = document.getElementById("availableCount");
+        if (el) el.innerText = `${count} unit${count !== 1 ? 's' : ''} available`;
+    }
+
+    // RENDER UNITS
+    function renderUnits() {
+        const container = document.getElementById("unitsContainer");
+        if (!container) return;
+        container.innerHTML = "";
+        for (let unit of units) {
+            let statusClass = "";
+            if (unit.status === "available") statusClass = "status-available";
+            else if (unit.status === "enroute") statusClass = "status-enroute";
+            else if (unit.status === "onscene") statusClass = "status-onscene";
+            else statusClass = "status-outofservice";
+            
+            const tile = document.createElement("div");
+            tile.className = "unit-tile";
+            tile.innerHTML = `
+                <div class="unit-info">
+                    <div class="unit-name">${unit.name} <span style="font-size:0.7rem;">${unit.id}</span></div>
+                    <div class="unit-badge">${unit.beat} ▸ ${unit.lat.toFixed(3)},${unit.lng.toFixed(3)}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap: 12px; flex-wrap:wrap;">
+                    <span class="status-chip ${statusClass}">${unit.status.toUpperCase()}</span>
+                    <div class="action-group">
+                        <button class="btn-sm" onclick="window.setUnitStatus('${unit.id}','available')">AVAIL</button>
+                        <button class="btn-sm" onclick="window.setUnitStatus('${unit.id}','outofservice')">OFF</button>
+                        ${unit.status === "enroute" ? `<button class="btn-sm btn-primary" onclick="window.unitArriveScene('${unit.id}')">🚓 ON SCENE</button>` : ''}
+                    </div>
+                </div>
+            `;
+            container.appendChild(tile);
+        }
+        updateAvailableCount();
+    }
+
+    function renderIncidents() {
+        const container = document.getElementById("incidentsContainer");
+        if (!container) return;
+        container.innerHTML = "";
+        if (incidents.length === 0) {
+            container.innerHTML = `<div style="padding: 30px; text-align:center; background:#0E1A1F; border-radius: 28px;">📭 NO ACTIVE CALLS · SYSTEM READY</div>`;
+            return;
+        }
+        for (let inc of incidents) {
+            const assignedUnit = inc.assignedUnitId ? units.find(u => u.id === inc.assignedUnitId) : null;
+            let priorityClass = inc.priority === "high" ? "priority-high" : (inc.priority === "medium" ? "priority-medium" : "priority-low");
+            const timeStr = inc.timestamp instanceof Date ? inc.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "now";
+            const cardDiv = document.createElement("div");
+            cardDiv.className = `incident-card ${priorityClass}`;
+            cardDiv.innerHTML = `
+                <div class="incident-details">
+                    <div class="incident-title">
+                        <strong>${inc.id}</strong> <span class="incident-loc">📍 ${inc.location}</span>
+                        <span style="font-size:0.65rem; background:#1B3940; padding:2px 8px; border-radius:30px;">${inc.priority}</span>
+                    </div>
+                    <div class="incident-meta">
+                        <span>🕒 ${timeStr}</span>
+                        <span>📌 ${inc.status === "assigned" ? `ASSIGNED TO ${assignedUnit?.name || "—"}` : "PENDING DISPATCH"}</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    ${!inc.assignedUnitId ? `<button class="btn-incident" onclick="window.suggestAndAssign('${inc.id}')">🎯 SUGGEST & ASSIGN</button>` : 
+                      `<button class="btn-incident" onclick="window.unitArriveScene('${inc.assignedUnitId}', '${inc.id}')">🚔 MARK ARRIVAL</button>`}
+                    <button class="btn-incident btn-warning" onclick="window.closeIncident('${inc.id}')">✔️ CLOSE</button>
+                </div>
+            `;
+            container.appendChild(cardDiv);
+        }
+    }
+
+    window.suggestAndAssign = function(incidentId) {
+        const incident = incidents.find(i => i.id === incidentId);
+        if (!incident) return;
+        const suggested = getSuggestedForIncident(incident);
+        if (suggested) {
+            if (confirm(`Recommend assigning ${suggested.name} (${suggested.id}) to ${incident.location}?`)) {
+                assignUnitToIncident(incident.id, suggested.id);
+            }
+        } else {
+            systemNotify("No available units to assign at this moment.", "warning");
+        }
+    };
+
+    function renderAll() {
+        renderUnits();
+        renderIncidents();
+        refreshSuggestion();
+    }
+
+    // live clock
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+        const clockDiv = document.getElementById("liveClock");
+        if (clockDiv) clockDiv.innerText = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // event listeners
+    document.getElementById("createIncidentBtn")?.addEventListener("click", () => {
+        const location = document.getElementById("incidentLocation").value.trim();
+        const priority = document.getElementById("incidentPriority").value;
+        if (location === "") {
+            systemNotify("Please enter a valid location.", "warning");
+            return;
+        }
+        createIncident(location, priority);
+    });
+    document.getElementById("quickNewDemoBtn")?.addEventListener("click", () => {
+        const demoLocations = ["Harbor & 12th", "Mission & 24th", "Bayview Station", "Fisherman's Wharf"];
+        const randLoc = demoLocations[Math.floor(Math.random() * demoLocations.length)];
+        const randPrio = ["high", "medium", "low"][Math.floor(Math.random() * 3)];
+        createIncident(randLoc, randPrio);
+    });
+
+    // expose globals for onclick handlers
+    window.setUnitStatus = setUnitStatus;
+    window.closeIncident = closeIncident;
+    window.unitArriveScene = unitArriveScene;
+    window.assignUnitToIncident = assignUnitToIncident;
+
+    renderAll();
+    systemNotify("Nexus Dispatch active — closest unit logic & incident simulation running", "info");
+</script>
+</body>
+</html>
