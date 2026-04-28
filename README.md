@@ -219,22 +219,7 @@ The included `index.html` demonstrates:
 > **Note:** The standalone HTML file uses client-side mock data. For full SQL persistence, connect to the Node.js backend above.
 
 ## Screenshot Preview
-┌─────────────────────────────────────────────────────────────┐
-│  NEXUS DISPATCH                    🔒 SECURE | 14:32:05     │
-├────────────────────────────┬────────────────────────────────┤
-│  📡 PATROL UNITS           │  🚨 LIVE INCIDENTS             │
-│  ┌─────────────────────┐   │  ┌─────────────────────────┐   │
-│  │ Sgt. Vasquez (E-241)│   │  │ 🔴 CAD-101 Market & 8th  │   │
-│  │ 🟢 AVAILABLE         │   │  │    PENDING DISPATCH      │   │
-│  └─────────────────────┘   │  └─────────────────────────┘   │
-│  ┌─────────────────────┐   │  ┌─────────────────────────┐   │
-│  │ Ofc. Park (M-809)   │   │  │ 🟠 CAD-102 Civic Center  │   │
-│  │ 🟡 ENROUTE           │   │  │    ASSIGNED TO E-241     │   │
-│  └─────────────────────┘   │  └─────────────────────────┘   │
-├────────────────────────────┴────────────────────────────────┤
-│  💡 AI SUGGESTION: Closest available unit: E-241            │
-│  [⚡ ASSIGN SUGGESTION]                                      │
-└─────────────────────────────────────────────────────────────┘
+<img width="2502" height="1313" alt="image" src="https://github.com/user-attachments/assets/8abe69e8-8035-4e1e-a93d-6a5d33f3aca5" />
 
 # Future Enhancements
 
