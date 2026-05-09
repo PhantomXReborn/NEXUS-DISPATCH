@@ -387,36 +387,186 @@
 </div>
 
 <script>
-    // --------------------------------------------------------------
-    // PROFESSIONAL MOCK DISPATCH WITH SHARP ROUNDED EDGES & LOGIC
-    // --------------------------------------------------------------
+    // API Configuration
+    const API_BASE_URL = window.location.origin + '/api';
     
-    // ---------- MOCK GPS DATABASE (SF simulation) ----------
-    const unitsData = [
-        { id: "E-241", name: "Sgt. Vasquez", status: "available", lat: 37.7749, lng: -122.4194, beat: "CENTRAL" },
-        { id: "M-809", name: "Ofc. Park",    status: "available", lat: 37.7695, lng: -122.4130, beat: "MISSION" },
-        { id: "K-117", name: "Ofc. Reyes",   status: "enroute",  lat: 37.7800, lng: -122.4300, beat: "NOBE" },
-        { id: "T-554", name: "Ofc. Delgado", status: "outofservice", lat: 37.7660, lng: -122.4250, beat: "SOMA" },
-        { id: "R-972", name: "Det. Chen",    status: "available", lat: 37.7820, lng: -122.4090, beat: "WHARF" },
-        { id: "D-301", name: "Ofc. Kowalski",status: "available", lat: 37.7712, lng: -122.4410, beat: "WEST ADD" }
-    ];
-
-    let units = JSON.parse(JSON.stringify(unitsData));
-
-    // incidents store
-    let incidents = [
-        { id: "CAD-101", location: "Market & 8th", priority: "high", assignedUnitId: null, timestamp: new Date(Date.now() - 420000), status: "pending", latlng: { lat: 37.7780, lng: -122.4120 } },
-        { id: "CAD-102", location: "Golden Gate Park", priority: "low", assignedUnitId: "E-241", timestamp: new Date(Date.now() - 180000), status: "assigned", latlng: { lat: 37.7690, lng: -122.4830 } }
-    ];
-
-    // helper: distance (simulated relative)
-    function getDistance(lat1, lng1, lat2, lng2) {
-        const dx = (lat1 - lat2) * 105;
-        const dy = (lng1 - lng2) * 85;
-        return Math.sqrt(dx*dx + dy*dy);
+    // State management
+    let units = [];
+    let incidents = [];
+    
+    // Helper functions
+    function systemNotify(msg, type = "info") {
+        const logDiv = document.getElementById("systemMessage");
+        if (logDiv) {
+            const timeStr = new Date().toLocaleTimeString();
+            const prefix = type === "error" ? "❌" : type === "warning" ? "⚠️" : "📡";
+            logDiv.innerHTML = `${prefix} ${timeStr} | ${msg}<br>${logDiv.innerHTML.slice(0, 400)}`;
+        }
+        console.log(`[DISPATCH] ${msg}`);
     }
-
-    // Generate lat/lng based on location name (consistent mock mapping)
+    
+    // Fetch data from backend
+    async function fetchUnits() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/units`);
+            if (!response.ok) throw new Error('Failed to fetch units');
+            units = await response.json();
+            renderUnits();
+            updateAvailableCount();
+        } catch (error) {
+            console.error('Error fetching units:', error);
+            systemNotify('Backend not available - using fallback data', 'warning');
+            // Fallback to mock data
+            units = [
+                { id: "E-241", name: "Sgt. Vasquez", status: "available", lat: 37.7749, lng: -122.4194, beat: "CENTRAL" },
+                { id: "M-809", name: "Ofc. Park", status: "available", lat: 37.7695, lng: -122.4130, beat: "MISSION" },
+                { id: "K-117", name: "Ofc. Reyes", status: "enroute", lat: 37.7800, lng: -122.4300, beat: "NOBE" },
+                { id: "T-554", name: "Ofc. Delgado", status: "outofservice", lat: 37.7660, lng: -122.4250, beat: "SOMA" }
+            ];
+            renderUnits();
+        }
+    }
+    
+    async function fetchIncidents() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/incidents`);
+            if (!response.ok) throw new Error('Failed to fetch incidents');
+            incidents = await response.json();
+            renderIncidents();
+        } catch (error) {
+            console.error('Error fetching incidents:', error);
+            incidents = [
+                { id: "CAD-101", location: "Market & 8th", priority: "high", assigned_unit_id: null, status: "pending", created_at: new Date() },
+                { id: "CAD-102", location: "Golden Gate Park", priority: "low", assigned_unit_id: "E-241", status: "assigned", created_at: new Date() }
+            ];
+            renderIncidents();
+        }
+    }
+    
+    async function updateUnitStatus(unitId, status) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/units/${unitId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            
+            if (!response.ok) throw new Error('Failed to update status');
+            const updatedUnit = await response.json();
+            systemNotify(`Unit ${unitId} status changed to ${status}`);
+            await fetchUnits();
+            await fetchIncidents(); // Refresh incidents as assignments may change
+        } catch (error) {
+            console.error('Error updating status:', error);
+            // Fallback for demo
+            const unit = units.find(u => u.id === unitId);
+            if (unit) unit.status = status;
+            renderUnits();
+            systemNotify(`Unit ${unitId} status changed to ${status} (local only)`, 'warning');
+        }
+    }
+    
+    async function createIncident(location, priority) {
+        const coords = getLocationCoords(location);
+        try {
+            const response = await fetch(`${API_BASE_URL}/incidents`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    location,
+                    priority,
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    description: `${priority} priority call at ${location}`,
+                    dispatcher: 'dispatcher1'
+                })
+            });
+            
+            if (!response.ok) throw new Error('Failed to create incident');
+            const newIncident = await response.json();
+            systemNotify(`${priority.toUpperCase()} incident created: ${location} (${newIncident.id})`);
+            await fetchIncidents();
+            refreshSuggestion();
+        } catch (error) {
+            console.error('Error creating incident:', error);
+            systemNotify('Failed to create incident - backend may be offline', 'error');
+        }
+    }
+    
+    async function assignUnitToIncident(incidentId, unitId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/assign`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    unit_id: unitId,
+                    dispatcher: 'dispatcher1'
+                })
+            });
+            
+            if (!response.ok) throw new Error('Failed to assign unit');
+            await response.json();
+            systemNotify(`Unit ${unitId} assigned to incident ${incidentId}`);
+            await Promise.all([fetchUnits(), fetchIncidents()]);
+            refreshSuggestion();
+        } catch (error) {
+            console.error('Error assigning unit:', error);
+            systemNotify('Failed to assign unit - try again', 'error');
+        }
+    }
+    
+    async function closeIncident(incidentId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/close`, {
+                method: 'PATCH'
+            });
+            
+            if (!response.ok) throw new Error('Failed to close incident');
+            systemNotify(`Incident ${incidentId} closed`);
+            await Promise.all([fetchUnits(), fetchIncidents()]);
+            refreshSuggestion();
+        } catch (error) {
+            console.error('Error closing incident:', error);
+            // Fallback for demo
+            const index = incidents.findIndex(i => i.id === incidentId);
+            if (index !== -1) {
+                incidents.splice(index, 1);
+                renderIncidents();
+                systemNotify(`Incident ${incidentId} closed (local only)`, 'warning');
+            }
+        }
+    }
+    
+    async function suggestAndAssign(incidentId) {
+        const incident = incidents.find(i => i.id === incidentId);
+        if (!incident) return;
+        
+        try {
+            const coords = getLocationCoords(incident.location);
+            const response = await fetch(`${API_BASE_URL}/units/closest/${coords.lat}/${coords.lng}`);
+            const suggestedUnit = await response.json();
+            
+            if (suggestedUnit) {
+                if (confirm(`Recommend assigning ${suggestedUnit.name} (${suggestedUnit.id}) to ${incident.location}?`)) {
+                    await assignUnitToIncident(incident.id, suggestedUnit.id);
+                }
+            } else {
+                systemNotify("No available units to assign at this moment.", "warning");
+            }
+        } catch (error) {
+            console.error('Error finding closest unit:', error);
+            // Fallback logic
+            const availableUnits = units.filter(u => u.status === "available");
+            if (availableUnits.length > 0) {
+                if (confirm(`Assign ${availableUnits[0].name} to this incident?`)) {
+                    await assignUnitToIncident(incident.id, availableUnits[0].id);
+                }
+            } else {
+                systemNotify("No available units!", "warning");
+            }
+        }
+    }
+    
     function getLocationCoords(location) {
         const map = {
             "Civic Center Plaza": { lat: 37.7795, lng: -122.4180 },
@@ -428,193 +578,15 @@
             "Bayview Station": { lat: 37.7320, lng: -122.3870 }
         };
         if (map[location]) return map[location];
-        // fallback dynamic hash (simple)
-        let hash = 0;
-        for(let i=0; i<location.length; i++) hash += location.charCodeAt(i);
-        return { lat: 37.770 + (hash % 10) * 0.002, lng: -122.420 + (hash % 8) * 0.003 };
+        return { lat: 37.7700, lng: -122.4200 };
     }
-
-    // find closest available unit to coordinates
-    function findClosestAvailableUnit(targetLat, targetLng) {
-        const availableUnits = units.filter(u => u.status === "available");
-        if (availableUnits.length === 0) return null;
-        let closest = null;
-        let minDist = Infinity;
-        for (let u of availableUnits) {
-            let d = getDistance(u.lat, u.lng, targetLat, targetLng);
-            if (d < minDist) {
-                minDist = d;
-                closest = u;
-            }
-        }
-        return closest;
-    }
-
-    // assign unit to incident
-    function assignUnitToIncident(incidentId, unitId, autoDispatchMsg = true) {
-        const incident = incidents.find(i => i.id === incidentId);
-        const unit = units.find(u => u.id === unitId);
-        if (!incident || !unit) return false;
-        if (unit.status !== "available") {
-            systemNotify(`⚠️ Unit ${unit.id} is ${unit.status.toUpperCase()}. Cannot assign.`, "warning");
-            return false;
-        }
-        // if incident already assigned, free previous unit
-        if (incident.assignedUnitId) {
-            const oldUnit = units.find(u => u.id === incident.assignedUnitId);
-            if (oldUnit && (oldUnit.status === "enroute" || oldUnit.status === "onscene")) {
-                oldUnit.status = "available";
-            }
-        }
-        incident.assignedUnitId = unit.id;
-        incident.status = "assigned";
-        unit.status = "enroute";
-        systemNotify(`📢 DISPATCHED: ${unit.name} (${unit.id}) → ${incident.location} [${incident.priority.toUpperCase()}]`, "success");
-        renderAll();
-        return true;
-    }
-
-    // get suggested unit for incident
-    function getSuggestedForIncident(incident) {
-        let coords = incident.latlng;
-        if (!coords) {
-            coords = getLocationCoords(incident.location);
-            incident.latlng = coords;
-        }
-        return findClosestAvailableUnit(coords.lat, coords.lng);
-    }
-
-    // create new incident
-    function createIncident(location, priority) {
-        const newId = "CAD-" + Math.floor(100 + Math.random() * 899);
-        const coords = getLocationCoords(location);
-        const newIncident = {
-            id: newId,
-            location: location.trim(),
-            priority: priority,
-            assignedUnitId: null,
-            timestamp: new Date(),
-            status: "pending",
-            latlng: coords
-        };
-        incidents.unshift(newIncident);
-        systemNotify(`🆕 ${priority.toUpperCase()} incident created: ${location} (${newId})`, "info");
-        renderAll();
-        // auto-suggest in the suggestion panel
-        const suggested = getSuggestedForIncident(newIncident);
-        updateSuggestionPanel(newIncident, suggested);
-    }
-
-    // close incident (resolve)
-    function closeIncident(incidentId) {
-        const idx = incidents.findIndex(i => i.id === incidentId);
-        if (idx !== -1) {
-            const inc = incidents[idx];
-            if (inc.assignedUnitId) {
-                const unit = units.find(u => u.id === inc.assignedUnitId);
-                if (unit && (unit.status === "enroute" || unit.status === "onscene")) {
-                    unit.status = "available";
-                    systemNotify(`🔄 Unit ${unit.id} released (incident cleared).`, "info");
-                }
-            }
-            incidents.splice(idx, 1);
-            systemNotify(`✅ Incident ${incidentId} closed & archived.`, "info");
-            renderAll();
-        }
-    }
-
+    
     function unitArriveScene(unitId, incidentId = null) {
-        const unit = units.find(u => u.id === unitId);
-        if (!unit) return;
-        if (unit.status === "enroute") {
-            unit.status = "onscene";
-            systemNotify(`📍 ${unit.name} (${unit.id}) ARRIVED ON SCENE.`, "success");
-            renderAll();
-        } else if (unit.status === "onscene") {
-            systemNotify(`ℹ️ ${unit.name} already on scene.`, "info");
-        } else {
-            systemNotify(`⚠️ Unit must be ENROUTE to mark arrival.`, "warning");
-        }
+        updateUnitStatus(unitId, 'onscene');
+        systemNotify(`Unit ${unitId} arrived on scene`);
     }
-
-    function setUnitStatus(unitId, newStatus) {
-        const unit = units.find(u => u.id === unitId);
-        if (!unit) return;
-        const oldStatus = unit.status;
-        unit.status = newStatus;
-        if (newStatus === "available" && oldStatus !== "available") {
-            const assignedIncident = incidents.find(i => i.assignedUnitId === unitId);
-            if (assignedIncident) {
-                assignedIncident.assignedUnitId = null;
-                assignedIncident.status = "pending";
-                systemNotify(`🔄 ${unit.id} set to AVAILABLE → incident unassigned.`, "info");
-            }
-        }
-        if (newStatus === "outofservice" && (oldStatus === "enroute" || oldStatus === "onscene")) {
-            const assignedInc = incidents.find(i => i.assignedUnitId === unitId);
-            if (assignedInc) {
-                assignedInc.assignedUnitId = null;
-                assignedInc.status = "pending";
-                systemNotify(`⚠️ Unit taken out of service → incident ${assignedInc.id} unassigned.`, "warning");
-            }
-        }
-        renderAll();
-    }
-
-    function systemNotify(msg, type = "info") {
-        const logDiv = document.getElementById("systemMessage");
-        if (logDiv) {
-            const timeStr = new Date().toLocaleTimeString();
-            logDiv.innerHTML = `🕘 ${timeStr} | ${msg}<br>${logDiv.innerHTML.slice(0, 400)}`;
-        }
-        console.log(`[DISPATCH] ${msg}`);
-    }
-
-    function updateSuggestionPanel(incident, suggestedUnit) {
-        const panel = document.getElementById("smartSuggestion");
-        if (!incident) {
-            panel.innerHTML = `💡 No pending incident — add new to test closest-unit AI.`;
-            return;
-        }
-        if (suggestedUnit) {
-            panel.innerHTML = `🎯 NEXT INCIDENT: ${incident.location} (${incident.priority}) &nbsp;→  🚔 CLOSEST AVAILABLE: ${suggestedUnit.name} (${suggestedUnit.id}) 
-            <button id="quickSuggestAssignBtn" class="btn-sm btn-primary" style="background:#00897b;">⚡ ASSIGN SUGGESTION</button>`;
-            const btn = document.getElementById("quickSuggestAssignBtn");
-            if (btn) {
-                btn.onclick = () => {
-                    assignUnitToIncident(incident.id, suggestedUnit.id);
-                };
-            }
-        } else {
-            panel.innerHTML = `⚠️ NO AVAILABLE UNITS for ${incident.location} — consider marking units available.`;
-        }
-    }
-
-    // show recommendation for first pending incident
-    function refreshSuggestion() {
-        const pendingInc = incidents.find(i => i.status === "pending" && !i.assignedUnitId);
-        if (pendingInc) {
-            const suggested = getSuggestedForIncident(pendingInc);
-            updateSuggestionPanel(pendingInc, suggested);
-        } else {
-            const anyIncident = incidents[0];
-            if (anyIncident) {
-                const suggestedAny = getSuggestedForIncident(anyIncident);
-                updateSuggestionPanel(anyIncident, suggestedAny);
-            } else {
-                document.getElementById("smartSuggestion").innerHTML = `✅ No active incidents — system idle. Add a mock incident.`;
-            }
-        }
-    }
-
-    // count available units
-    function updateAvailableCount() {
-        const count = units.filter(u => u.status === "available").length;
-        const el = document.getElementById("availableCount");
-        if (el) el.innerText = `${count} unit${count !== 1 ? 's' : ''} available`;
-    }
-
-    // RENDER UNITS
+    
+    // Render functions
     function renderUnits() {
         const container = document.getElementById("unitsContainer");
         if (!container) return;
@@ -631,13 +603,13 @@
             tile.innerHTML = `
                 <div class="unit-info">
                     <div class="unit-name">${unit.name} <span style="font-size:0.7rem;">${unit.id}</span></div>
-                    <div class="unit-badge">${unit.beat} ▸ ${unit.lat.toFixed(3)},${unit.lng.toFixed(3)}</div>
+                    <div class="unit-badge">${unit.beat || 'UNKNOWN'} ▸ ${unit.lat?.toFixed(3) || '0'},${unit.lng?.toFixed(3) || '0'}</div>
                 </div>
                 <div style="display:flex; align-items:center; gap: 12px; flex-wrap:wrap;">
                     <span class="status-chip ${statusClass}">${unit.status.toUpperCase()}</span>
                     <div class="action-group">
-                        <button class="btn-sm" onclick="window.setUnitStatus('${unit.id}','available')">AVAIL</button>
-                        <button class="btn-sm" onclick="window.setUnitStatus('${unit.id}','outofservice')">OFF</button>
+                        <button class="btn-sm" onclick="window.updateUnitStatus('${unit.id}','available')">AVAIL</button>
+                        <button class="btn-sm" onclick="window.updateUnitStatus('${unit.id}','outofservice')">OFF</button>
                         ${unit.status === "enroute" ? `<button class="btn-sm btn-primary" onclick="window.unitArriveScene('${unit.id}')">🚓 ON SCENE</button>` : ''}
                     </div>
                 </div>
@@ -646,7 +618,7 @@
         }
         updateAvailableCount();
     }
-
+    
     function renderIncidents() {
         const container = document.getElementById("incidentsContainer");
         if (!container) return;
@@ -656,9 +628,9 @@
             return;
         }
         for (let inc of incidents) {
-            const assignedUnit = inc.assignedUnitId ? units.find(u => u.id === inc.assignedUnitId) : null;
+            const assignedUnit = inc.assigned_unit_id ? units.find(u => u.id === inc.assigned_unit_id) : null;
             let priorityClass = inc.priority === "high" ? "priority-high" : (inc.priority === "medium" ? "priority-medium" : "priority-low");
-            const timeStr = inc.timestamp instanceof Date ? inc.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "now";
+            const timeStr = inc.created_at ? new Date(inc.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "now";
             const cardDiv = document.createElement("div");
             cardDiv.className = `incident-card ${priorityClass}`;
             cardDiv.innerHTML = `
@@ -673,45 +645,61 @@
                     </div>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    ${!inc.assignedUnitId ? `<button class="btn-incident" onclick="window.suggestAndAssign('${inc.id}')">🎯 SUGGEST & ASSIGN</button>` : 
-                      `<button class="btn-incident" onclick="window.unitArriveScene('${inc.assignedUnitId}', '${inc.id}')">🚔 MARK ARRIVAL</button>`}
+                    ${!inc.assigned_unit_id ? `<button class="btn-incident" onclick="window.suggestAndAssign('${inc.id}')">🎯 SUGGEST & ASSIGN</button>` : 
+                      `<button class="btn-incident" onclick="window.unitArriveScene('${inc.assigned_unit_id}', '${inc.id}')">🚔 MARK ARRIVAL</button>`}
                     <button class="btn-incident btn-warning" onclick="window.closeIncident('${inc.id}')">✔️ CLOSE</button>
                 </div>
             `;
             container.appendChild(cardDiv);
         }
     }
-
-    window.suggestAndAssign = function(incidentId) {
-        const incident = incidents.find(i => i.id === incidentId);
-        if (!incident) return;
-        const suggested = getSuggestedForIncident(incident);
-        if (suggested) {
-            if (confirm(`Recommend assigning ${suggested.name} (${suggested.id}) to ${incident.location}?`)) {
-                assignUnitToIncident(incident.id, suggested.id);
-            }
-        } else {
-            systemNotify("No available units to assign at this moment.", "warning");
-        }
-    };
-
-    function renderAll() {
-        renderUnits();
-        renderIncidents();
-        refreshSuggestion();
+    
+    function updateAvailableCount() {
+        const count = units.filter(u => u.status === "available").length;
+        const el = document.getElementById("availableCount");
+        if (el) el.innerText = `${count} unit${count !== 1 ? 's' : ''} available`;
     }
-
-    // live clock
+    
+    function refreshSuggestion() {
+        const pendingInc = incidents.find(i => i.status === "pending" && !i.assigned_unit_id);
+        const panel = document.getElementById("smartSuggestion");
+        if (pendingInc) {
+            panel.innerHTML = `🎯 PENDING: ${pendingInc.location} (${pendingInc.priority}) → Click "SUGGEST & ASSIGN" on incident`;
+        } else if (incidents.length > 0) {
+            panel.innerHTML = `📋 All incidents assigned. Monitor unit status.`;
+        } else {
+            panel.innerHTML = `✅ No active incidents — system idle. Add a mock incident.`;
+        }
+    }
+    
     function updateClock() {
         const now = new Date();
         const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
         const clockDiv = document.getElementById("liveClock");
         if (clockDiv) clockDiv.innerText = timeStr;
     }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // event listeners
+    
+    // Auto-refresh every 5 seconds
+    let refreshInterval;
+    function startAutoRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(async () => {
+            await Promise.all([fetchUnits(), fetchIncidents()]);
+            refreshSuggestion();
+        }, 5000);
+    }
+    
+    // Initialize
+    async function init() {
+        updateClock();
+        setInterval(updateClock, 1000);
+        await Promise.all([fetchUnits(), fetchIncidents()]);
+        refreshSuggestion();
+        startAutoRefresh();
+        systemNotify("Nexus Dispatch connected to backend API", "info");
+    }
+    
+    // Event listeners
     document.getElementById("createIncidentBtn")?.addEventListener("click", () => {
         const location = document.getElementById("incidentLocation").value.trim();
         const priority = document.getElementById("incidentPriority").value;
@@ -721,21 +709,23 @@
         }
         createIncident(location, priority);
     });
+    
     document.getElementById("quickNewDemoBtn")?.addEventListener("click", () => {
         const demoLocations = ["Harbor & 12th", "Mission & 24th", "Bayview Station", "Fisherman's Wharf"];
         const randLoc = demoLocations[Math.floor(Math.random() * demoLocations.length)];
         const randPrio = ["high", "medium", "low"][Math.floor(Math.random() * 3)];
         createIncident(randLoc, randPrio);
     });
-
-    // expose globals for onclick handlers
-    window.setUnitStatus = setUnitStatus;
+    
+    // Expose globals
+    window.updateUnitStatus = updateUnitStatus;
     window.closeIncident = closeIncident;
     window.unitArriveScene = unitArriveScene;
+    window.suggestAndAssign = suggestAndAssign;
     window.assignUnitToIncident = assignUnitToIncident;
-
-    renderAll();
-    systemNotify("Nexus Dispatch active — closest unit logic & incident simulation running", "info");
+    
+    // Start the application
+    init();
 </script>
 </body>
 </html>
