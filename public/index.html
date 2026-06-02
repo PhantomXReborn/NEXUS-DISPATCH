@@ -1,731 +1,1461 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Nexus Dispatch | Professional CAD simulator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS DISPATCH — CAD SYSTEM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── RESET & ROOT ──────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            background: radial-gradient(circle at 20% 30%, #0B1219, #050A10);
-            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Roboto', sans-serif;
-            padding: 28px 32px;
-            min-height: 100vh;
-            color: #EDF4FF;
-        }
+  :root {
+    --bg:          #050810;
+    --bg-panel:    #080d18;
+    --bg-card:     #0b1220;
+    --bg-hover:    #0f1a2e;
+    --border:      #1a2a45;
+    --border-bright:#2a4070;
+    --text:        #c8d8f0;
+    --text-dim:    #5a7099;
+    --text-bright: #e8f0ff;
+    --accent:      #00d4ff;
+    --accent-dim:  #006080;
+    --green:       #00ff88;
+    --green-dim:   #004422;
+    --red:         #ff3355;
+    --red-dim:     #440011;
+    --amber:       #ffaa00;
+    --amber-dim:   #442200;
+    --purple:      #aa55ff;
+    --purple-dim:  #220044;
+    --scan-line: rgba(0,212,255,0.03);
+    --glow: 0 0 20px rgba(0,212,255,0.15);
+    --glow-red: 0 0 20px rgba(255,51,85,0.3);
+    --glow-green: 0 0 20px rgba(0,255,136,0.2);
+  }
 
-        /* header area */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-        .badge-system {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .logo {
-            background: #0F2128;
-            padding: 8px 20px;
-            border-radius: 18px; /* lightly rounded */
-            backdrop-filter: blur(2px);
-            border: 1px solid rgba(0, 188, 212, 0.3);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        .logo h1 {
-            font-size: 1.6rem;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-            background: linear-gradient(135deg, #B2EBF2, #4DD0E1);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        .logo span {
-            font-size: 0.7rem;
-            color: #7F8FA4;
-            letter-spacing: 0.5px;
-        }
-        .status-badge {
-            background: #0F1A1F;
-            padding: 6px 16px;
-            border-radius: 40px;
-            font-weight: 500;
-            border-left: 3px solid #26C6DA;
-            font-family: monospace;
-        }
-        .clock {
-            font-family: 'JetBrains Mono', monospace;
-            background: #0A1117;
-            padding: 8px 20px;
-            border-radius: 28px;
-            font-size: 1.1rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            border: 1px solid #2C3E44;
-        }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+  }
 
-        /* GRID: 2 columns with sharp rounded corners */
-        .dispatch-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 28px;
-        }
+  /* Scanline overlay */
+  body::before {
+    content:'';
+    position:fixed; inset:0; z-index:9999; pointer-events:none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      var(--scan-line) 2px,
+      var(--scan-line) 4px
+    );
+  }
 
-        /* card design - sharp but gently radius (12px to 18px consistency) */
-        .card {
-            background: rgba(15, 25, 30, 0.75);
-            backdrop-filter: blur(2px);
-            border-radius: 20px;    /* lightly rounded but crisp */
-            border: 1px solid rgba(72, 187, 194, 0.2);
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.5);
-            transition: all 0.2s ease;
-            overflow: hidden;
-        }
-        .card-hearder {
-            padding: 18px 24px;
-            background: rgba(5, 15, 20, 0.7);
-            border-bottom: 1px solid #1E3A3F;
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .card-header h2 {
-            font-size: 1.35rem;
-            font-weight: 600;
-            letter-spacing: -0.2px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .card-header h2 i {
-            font-size: 1.3rem;
-        }
-        .card-body {
-            padding: 20px 24px;
-        }
+  /* ── LAYOUT ───────────────────────────────────────────────── */
+  #app {
+    display: grid;
+    grid-template-rows: 52px 1fr;
+    grid-template-columns: 280px 1fr 300px;
+    height: 100vh;
+    gap: 1px;
+    background: var(--border);
+  }
 
-        /* Unit grid (modern tiles) */
-        .units-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-        .unit-tile {
-            background: #0E1920;
-            border-radius: 18px;
-            padding: 14px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            transition: all 0.15s;
-            border: 1px solid #233B42;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        }
-        .unit-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .unit-name {
-            font-weight: 700;
-            font-size: 1rem;
-            letter-spacing: -0.2px;
-        }
-        .unit-badge {
-            font-size: 0.7rem;
-            color: #9BB7C9;
-            background: #071016;
-            padding: 2px 8px;
-            border-radius: 30px;
-            width: fit-content;
-        }
-        .status-chip {
-            font-weight: 600;
-            font-size: 0.7rem;
-            padding: 4px 12px;
-            border-radius: 40px;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-        .status-available { background: #1B5E20; color: #C8E6C9; border-left: 2px solid #4CAF50; }
-        .status-enroute { background: #B26A00; color: #FFF3E0; border-left: 2px solid #FFB74D; }
-        .status-onscene { background: #0D47A1; color: #BBDEFB; border-left: 2px solid #42A5F5; }
-        .status-outofservice { background: #4A4E5C; color: #E0E0E0; border-left: 2px solid #9E9E9E; }
-        .action-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .btn-sm {
-            background: #1E3B40;
-            border: none;
-            color: #CFE7E8;
-            padding: 6px 12px;
-            border-radius: 34px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.1s linear;
-            font-family: inherit;
-        }
-        .btn-sm:hover {
-            background: #2F5E66;
-            color: white;
-            transform: translateY(-1px);
-        }
-        .btn-primary {
-            background: #007c8c;
-            color: white;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-        .btn-primary:hover {
-            background: #0097a7;
-        }
+  /* ── HEADER ───────────────────────────────────────────────── */
+  #header {
+    grid-column: 1 / -1;
+    background: var(--bg-panel);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 24px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  #header::after {
+    content:'';
+    position:absolute;
+    bottom:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scanH 4s linear infinite;
+  }
+  @keyframes scanH {
+    0%   { transform: translateX(-100%); opacity:0; }
+    20%  { opacity:1; }
+    80%  { opacity:1; }
+    100% { transform: translateX(100%); opacity:0; }
+  }
 
-        /* incident list */
-        .incident-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            max-height: 520px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-        .incident-card {
-            background: #0D181F;
-            border-radius: 18px;
-            padding: 16px;
-            border-left: 5px solid;
-            transition: 0.1s;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-        }
-        .priority-high { border-left-color: #E53935; background: linear-gradient(97deg, #0F1D22, #0C161C); }
-        .priority-medium { border-left-color: #FFA726; }
-        .priority-low { border-left-color: #43A047; }
-        .incident-details {
-            flex: 2;
-        }
-        .incident-title {
-            font-weight: 700;
-            font-size: 0.95rem;
-            display: flex;
-            gap: 12px;
-            align-items: baseline;
-            flex-wrap: wrap;
-        }
-        .incident-loc {
-            color: #AAD4DB;
-        }
-        .incident-meta {
-            font-size: 0.7rem;
-            color: #8DA3B3;
-            margin-top: 6px;
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        .btn-incident {
-            background: #1F4149;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 34px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            color: #EFF7FA;
-            transition: 0.1s;
-        }
-        .btn.incident:hover {
-            background: #2F6F7A;
-        }
-        .btn-warning {
-            background: #9C4D3A;
-        }
-        .btn-warning:hover {
-            background: #B95F48;
-        }
+  .logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(0,212,255,0.6);
+    white-space: nowrap;
+  }
+  .logo span { color: var(--text-dim); font-weight: 300; }
 
-        /* suggestion panel */
-        .suggestion-panel {
-            margin-top: 24px;
-            background: #0C1920;
-            border-radius: 18px;
-            padding: 14px 18px;
-            border: 1px solid #2A5F68;
-            font-size: 0.85rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .form-incline {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 12px;
-        }
-        .form-incline input, .form-incline select {
-            background: #0C1920;
-            border: 1px solid #2C5A64;
-            padding: 10px 16px;
-            border-radius: 34px;
-            color: #EFFAFF;
-            font-family: inherit;
-            flex: 1;
-            outline: none;
-        }
-        .form-incline input:focus, .form-incline select:focus {
-            border-color: #4DD0E1;
-        }
-        hr {
-            margin: 16px 0;
-            border-color: #1F454E;
-        }
-        .log-area {
-            font-size: 0.7rem;
-            font-family: monospace;
-            color: #7AAEB8;
-        }
+  .header-divider {
+    width: 1px; height: 30px;
+    background: var(--border-bright);
+  }
 
-        ::-webkit-scrollar {
-            width: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #051016;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2E6A74;
-            border-radius: 10px;
-        }
+  .header-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .header-stat .label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .header-stat .value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 18px;
+    color: var(--text-bright);
+    line-height: 1;
+  }
+  .header-stat .value.green { color: var(--green); text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+  .header-stat .value.red   { color: var(--red); text-shadow: 0 0 10px rgba(255,51,85,0.5); }
+  .header-stat .value.amber { color: var(--amber); }
 
-        @media (max-width: 850px) {
-            body { padding: 16px; }
-            .dispatch-grid { grid-template-columns: 1fr; gap: 20px; }
-        }
-    </style>
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  #clock {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 20px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(0,212,255,0.4);
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--green);
+    text-transform: uppercase;
+  }
+  .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* ── PANELS ───────────────────────────────────────────────── */
+  .panel {
+    background: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .panel-count {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid var(--accent-dim);
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+
+  .icon {
+    width: 14px; height: 14px;
+    opacity: 0.6;
+  }
+
+  /* ── LEFT PANEL: INCIDENTS ────────────────────────────────── */
+  #incidents-panel {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #incident-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #incident-list::-webkit-scrollbar { width: 3px; }
+  #incident-list::-webkit-scrollbar-track { background: transparent; }
+  #incident-list::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  .incident-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, background 0.2s;
+    animation: cardIn 0.3s ease both;
+  }
+  @keyframes cardIn {
+    from { opacity:0; transform: translateX(-12px); }
+    to   { opacity:1; transform: translateX(0); }
+  }
+  .incident-card:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-bright);
+  }
+  .incident-card.selected {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+  }
+  .incident-card::before {
+    content:'';
+    position:absolute;
+    left:0; top:0; bottom:0; width:3px;
+  }
+  .incident-card.high::before   { background: var(--red);   box-shadow: 2px 0 8px var(--red); }
+  .incident-card.medium::before { background: var(--amber); box-shadow: 2px 0 8px var(--amber); }
+  .incident-card.low::before    { background: var(--green); box-shadow: 2px 0 8px var(--green); }
+
+  .inc-row1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  .inc-id {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .priority-badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .priority-badge.high   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,51,85,0.3); }
+  .priority-badge.medium { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,170,0,0.3); }
+  .priority-badge.low    { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+
+  .status-badge {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .status-badge.pending  { color: var(--amber); }
+  .status-badge.assigned { color: var(--accent); }
+
+  .inc-location {
+    font-size: 12px;
+    color: var(--text-bright);
+    font-weight: 500;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .inc-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .inc-row3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .inc-time {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+  .inc-unit {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--purple);
+    background: var(--purple-dim);
+    border: 1px solid rgba(170,85,255,0.25);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  /* HIGH PRIORITY BLINK */
+  .incident-card.high.pending {
+    animation: cardIn 0.3s ease both, highAlert 2s ease-in-out 0.5s infinite;
+  }
+  @keyframes highAlert {
+    0%, 100% { border-color: var(--border); }
+    50% { border-color: rgba(255,51,85,0.5); box-shadow: 0 0 12px rgba(255,51,85,0.15); }
+  }
+
+  /* ── CENTER: MAP ──────────────────────────────────────────── */
+  #map-panel {
+    grid-column: 2;
+    grid-row: 2;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #tactical-map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Map grid overlay */
+  #tactical-map::before {
+    content:'';
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .map-canvas {
+    width: 100%; height: 100%;
+    background: radial-gradient(ellipse at 40% 50%, #060e1a 0%, #030710 100%);
+  }
+
+  /* Map overlay controls */
+  .map-overlay {
+    position: absolute;
+    top: 12px; left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 10;
+  }
+  .map-btn {
+    background: rgba(8,13,24,0.85);
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 5px 9px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .map-btn:hover, .map-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+  }
+
+  .map-coords {
+    position: absolute;
+    bottom: 10px; left: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    z-index: 10;
+  }
+  .map-zoom {
+    position: absolute;
+    bottom: 10px; right: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    z-index: 10;
+  }
+
+  /* ── RIGHT PANEL ──────────────────────────────────────────── */
+  #right-panel {
+    grid-column: 3;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+  }
+
+  /* Units section */
+  #units-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #unit-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  #unit-list::-webkit-scrollbar { width: 3px; }
+  #unit-list::-webkit-scrollbar-thumb { background: var(--border-bright); }
+
+  .unit-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    animation: cardIn 0.3s ease both;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .unit-card:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-bright);
+  }
+  .unit-card.selected { border-color: var(--purple); background: rgba(170,85,255,0.04); }
+
+  .unit-status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .unit-status-dot.available   { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+  .unit-status-dot.enroute     { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1s infinite; }
+  .unit-status-dot.onscene     { background: var(--amber);  box-shadow: 0 0 6px var(--amber); }
+  .unit-status-dot.outofservice{ background: var(--text-dim); }
+
+  .unit-info { flex: 1; min-width: 0; }
+  .unit-id {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text-bright);
+    letter-spacing: 1px;
+  }
+  .unit-name {
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .unit-beat {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  .unit-status-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .unit-status-label.available    { color: var(--green); }
+  .unit-status-label.enroute      { color: var(--accent); }
+  .unit-status-label.onscene      { color: var(--amber); }
+  .unit-status-label.outofservice { color: var(--text-dim); }
+
+  /* ── ACTION PANEL ─────────────────────────────────────────── */
+  #action-section {
+    flex-shrink: 0;
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .action-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid;
+    background: transparent;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::after {
+    content:'';
+    position:absolute; inset:0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .btn:hover::after { opacity: 0.1; }
+  .btn:active::after { opacity: 0.2; }
+
+  .btn-dispatch {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-dispatch:hover {
+    box-shadow: 0 0 15px rgba(0,212,255,0.2);
+  }
+  .btn-close-inc {
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .btn-close-inc:hover { box-shadow: 0 0 15px rgba(0,255,136,0.15); }
+
+  .btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .btn:disabled::after { display: none; }
+
+  /* ── LOG SECTION ──────────────────────────────────────────── */
+  #log-section {
+    flex-shrink: 0;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #log-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  #log-list::-webkit-scrollbar { width: 2px; }
+  #log-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .log-entry {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 8px;
+    animation: logSlide 0.25s ease;
+  }
+  @keyframes logSlide {
+    from { opacity:0; transform: translateY(-4px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+  .log-time { color: var(--accent-dim); flex-shrink: 0; }
+  .log-entry.event { color: var(--accent); }
+  .log-entry.warn  { color: var(--amber); }
+  .log-entry.alert { color: var(--red); }
+  .log-entry.ok    { color: var(--green); }
+
+  /* ── NEW INCIDENT MODAL ───────────────────────────────────── */
+  #modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+
+  #modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-top: 2px solid var(--accent);
+    width: 420px;
+    padding: 24px;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), var(--glow);
+    animation: modalIn 0.25s ease;
+  }
+  @keyframes modalIn {
+    from { opacity:0; transform: scale(0.96) translateY(-10px); }
+    to   { opacity:1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 20px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .modal-title::before {
+    content:'';
+    display: inline-block;
+    width: 3px; height: 20px;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-bright);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    border-radius: 2px;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(0,212,255,0.15);
+  }
+  .form-select option { background: var(--bg-card); }
+  .form-textarea { resize: none; height: 64px; }
+
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-group { flex: 1; }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .modal-actions .btn { flex: 1; padding: 10px; font-size: 13px; }
+  .btn-cancel { border-color: var(--border-bright); color: var(--text-dim); }
+
+  .modal-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: none; border: none;
+    color: var(--text-dim);
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--text-bright); }
+
+  /* ── MAP SVG ELEMENTS ─────────────────────────────────────── */
+  .map-unit-marker {
+    cursor: pointer;
+    transition: transform 0.3s;
+  }
+  .map-unit-marker:hover { transform-origin: center; transform: scale(1.3); }
+  .map-incident-marker { cursor: pointer; }
+
+  /* ── DISPATCH CONFIRM ─────────────────────────────────────── */
+  #dispatch-panel {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid var(--accent);
+    padding: 12px;
+    border-radius: 4px;
+    display: none;
+  }
+  #dispatch-panel.open { display: block; }
+  .dispatch-info {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+  .dispatch-info strong { color: var(--accent); }
+
+  /* ── RADAR ANIMATION ──────────────────────────────────────── */
+  @keyframes radarSweep {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes ripple {
+    0%   { r: 4; opacity: 0.8; }
+    100% { r: 25; opacity: 0; }
+  }
+
+  .marker-pulse { animation: ripple 2s ease-out infinite; }
+  .marker-pulse2 { animation: ripple 2s ease-out 0.7s infinite; }
+
+  /* ── NOTIFICATION TOAST ───────────────────────────────────── */
+  #toast-container {
+    position: fixed;
+    top: 60px; right: 16px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    letter-spacing: 0.5px;
+    max-width: 280px;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    pointer-events: auto;
+  }
+  .toast.alert-toast { border-left-color: var(--red); color: var(--red); }
+  .toast.ok-toast    { border-left-color: var(--green); }
+  @keyframes toastIn {
+    from { opacity:0; transform: translateX(20px); }
+    to   { opacity:1; transform: translateX(0); }
+  }
+  @keyframes toastOut {
+    from { opacity:1; }
+    to   { opacity:0; }
+  }
+
+  /* ── SELECTION CONTEXT ────────────────────────────────────── */
+  .context-panel {
+    padding: 10px;
+    background: rgba(0,212,255,0.04);
+    border: 1px solid var(--accent-dim);
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    display: none;
+  }
+  .context-panel.open { display: block; }
+  .context-panel strong { color: var(--accent); font-size: 11px; }
+
+  /* ── BOTTOM STATUS BAR ────────────────────────────────────── */
+  .bottom-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 22px;
+    background: rgba(5,8,16,0.9);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 20px;
+    z-index: 5;
+  }
+  .bb-item {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .bb-item .dot { width: 5px; height: 5px; border-radius: 50%; }
+
+  .add-btn {
+    background: rgba(0,212,255,0.08);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .add-btn:hover {
+    background: rgba(0,212,255,0.15);
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+</style>
 </head>
 <body>
-<div class="dashboard-container">
-    <div class="top-bar">
-        <div class="badge-system">
-            <div class="logo">
-                <h1>NEXUS DISPATCH</h1>
-                <span>CAD SIMULATOR | CJIS-STYLE LOGIC</span>
-            </div>
-            <div class="status-badge">SECURE CONNECTION | MOCK ENV</div>
-        </div>
-        <div class="clock" id="liveClock">--:--:--</div>
+
+<div id="app">
+  <!-- HEADER -->
+  <header id="header">
+    <div class="logo">NEXUS <span>/</span> DISPATCH</div>
+    <div class="header-divider"></div>
+    <div class="header-stat">
+      <span class="label">Active Incidents</span>
+      <span class="value red" id="hdr-incidents">0</span>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-stat">
+      <span class="label">Units Available</span>
+      <span class="value green" id="hdr-available">0</span>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-stat">
+      <span class="label">Total Units</span>
+      <span class="value" id="hdr-total">0</span>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-stat">
+      <span class="label">Today's Calls</span>
+      <span class="value amber" id="hdr-today">0</span>
+    </div>
+    <div class="header-right">
+      <div class="status-pill"><div class="pulse-dot"></div> SYSTEM ONLINE</div>
+      <div id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- LEFT: INCIDENTS -->
+  <div class="panel" id="incidents-panel">
+    <div class="panel-header">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+      </svg>
+      <span class="panel-title">Active Incidents</span>
+      <span class="panel-count" id="inc-count">0</span>
+    </div>
+    <div style="padding:8px;">
+      <button class="add-btn" onclick="openModal()">+ NEW INCIDENT</button>
+    </div>
+    <div id="incident-list"></div>
+  </div>
+
+  <!-- CENTER: TACTICAL MAP -->
+  <div class="panel" id="map-panel">
+    <div class="map-overlay">
+      <button class="map-btn active">TACTICAL</button>
+      <button class="map-btn">TERRAIN</button>
+      <button class="map-btn">UNITS</button>
+    </div>
+    <svg id="tactical-map" class="map-canvas" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="mapGrad" cx="40%" cy="50%">
+          <stop offset="0%" stop-color="#060e1a"/>
+          <stop offset="100%" stop-color="#030710"/>
+        </radialGradient>
+        <filter id="glow-filter">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <!-- Radar sweep gradient -->
+        <radialGradient id="radarGrad" cx="50%" cy="50%">
+          <stop offset="0%" stop-color="rgba(0,212,255,0.15)"/>
+          <stop offset="100%" stop-color="rgba(0,212,255,0)"/>
+        </radialGradient>
+      </defs>
+
+      <!-- Background -->
+      <rect width="100%" height="100%" fill="url(#mapGrad)"/>
+
+      <!-- Grid lines -->
+      <g stroke="rgba(0,212,255,0.05)" stroke-width="1">
+        <line x1="0" y1="25%" x2="100%" y2="25%"/>
+        <line x1="0" y1="50%" x2="100%" y2="50%"/>
+        <line x1="0" y1="75%" x2="100%" y2="75%"/>
+        <line x1="25%" y1="0" x2="25%" y2="100%"/>
+        <line x1="50%" y1="0" x2="50%" y2="100%"/>
+        <line x1="75%" y1="0" x2="75%" y2="100%"/>
+      </g>
+
+      <!-- City "streets" - stylized -->
+      <g stroke="rgba(20,40,80,0.8)" stroke-width="3" fill="none">
+        <!-- Horizontals -->
+        <line x1="0" y1="30%" x2="100%" y2="30%"/>
+        <line x1="0" y1="45%" x2="100%" y2="45%"/>
+        <line x1="0" y1="60%" x2="100%" y2="62%"/>
+        <line x1="0" y1="75%" x2="100%" y2="73%"/>
+        <!-- Verticals -->
+        <line x1="20%" y1="0" x2="22%" y2="100%"/>
+        <line x1="38%" y1="0" x2="40%" y2="100%"/>
+        <line x1="55%" y1="0" x2="57%" y2="100%"/>
+        <line x1="72%" y1="0" x2="74%" y2="100%"/>
+        <line x1="88%" y1="0" x2="87%" y2="100%"/>
+        <!-- Diagonal -->
+        <line x1="0" y1="55%" x2="45%" y2="25%"/>
+        <line x1="55%" y1="80%" x2="100%" y2="55%"/>
+      </g>
+      <!-- Brighter main streets -->
+      <g stroke="rgba(30,55,100,0.9)" stroke-width="5" fill="none">
+        <line x1="0" y1="50%" x2="100%" y2="50%"/>
+        <line x1="50%" y1="0" x2="50%" y2="100%"/>
+      </g>
+
+      <!-- City blocks -->
+      <g fill="rgba(8,18,40,0.6)" stroke="rgba(15,30,60,0.5)" stroke-width="1">
+        <rect x="23%" y="32%" width="14%" height="12%"/>
+        <rect x="41%" y="32%" width="13%" height="12%"/>
+        <rect x="23%" y="47%" width="14%" height="11%"/>
+        <rect x="41%" y="47%" width="13%" height="11%"/>
+        <rect x="58%" y="32%" width="13%" height="12%"/>
+        <rect x="75%" y="32%" width="11%" height="12%"/>
+        <rect x="58%" y="47%" width="13%" height="11%"/>
+        <rect x="75%" y="47%" width="11%" height="11%"/>
+        <rect x="5%" y="32%" width="14%" height="27%"/>
+        <rect x="5%" y="62%" width="14%" height="11%"/>
+        <rect x="23%" y="62%" width="31%" height="9%"/>
+        <rect x="58%" y="62%" width="28%" height="9%"/>
+        <rect x="23%" y="10%" width="65%" height="18%"/>
+        <rect x="5%" y="10%" width="14%" height="18%"/>
+        <rect x="90%" y="10%" width="8%" height="62%"/>
+      </g>
+
+      <!-- Radar ring -->
+      <circle id="radar-ring" cx="50%" cy="50%" r="80" fill="none" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>
+      <circle cx="50%" cy="50%" r="150" fill="none" stroke="rgba(0,212,255,0.03)" stroke-width="1"/>
+      <circle cx="50%" cy="50%" r="220" fill="none" stroke="rgba(0,212,255,0.02)" stroke-width="1"/>
+
+      <!-- Radar sweep -->
+      <g id="radar-sweep" style="transform-origin:50% 50%; animation: radarSweep 6s linear infinite;">
+        <path d="M 50% 50% L 50% 30%" stroke="rgba(0,212,255,0.5)" stroke-width="1.5"/>
+        <path id="sweep-arc" fill="url(#radarGrad)" opacity="0.4"/>
+      </g>
+
+      <!-- Map markers rendered by JS -->
+      <g id="map-markers"></g>
+      <g id="map-incidents"></g>
+    </svg>
+
+    <div class="map-coords" id="map-coords">LAT: 37.7749° N  LNG: 122.4194° W</div>
+    <div class="map-zoom">ZOOM: 12X</div>
+
+    <div class="bottom-bar">
+      <div class="bb-item"><div class="dot" style="background:var(--green);box-shadow:0 0 4px var(--green)"></div>AVAILABLE</div>
+      <div class="bb-item"><div class="dot" style="background:var(--accent);box-shadow:0 0 4px var(--accent)"></div>EN ROUTE</div>
+      <div class="bb-item"><div class="dot" style="background:var(--amber);box-shadow:0 0 4px var(--amber)"></div>ON SCENE</div>
+      <div class="bb-item"><div class="dot" style="background:var(--text-dim)"></div>OUT OF SERVICE</div>
+      <div class="bb-item" style="margin-left:auto">
+        <div class="dot" style="background:var(--red);box-shadow:0 0 4px var(--red)"></div>HIGH PRIORITY
+      </div>
+      <div class="bb-item"><div class="dot" style="background:var(--amber)"></div>MEDIUM</div>
+      <div class="bb-item"><div class="dot" style="background:var(--green)"></div>LOW</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: UNITS + ACTIONS -->
+  <div id="right-panel">
+    <div id="units-section">
+      <div class="panel-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="1" y="3" width="15" height="13"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+        <span class="panel-title">Field Units</span>
+        <span class="panel-count" id="unit-count">0</span>
+      </div>
+      <div id="unit-list"></div>
     </div>
 
-    <div class="dispatch-grid">
-        <!-- LEFT: UNITS PANEL -->
-         <div class="card">
-            <div class="card-header">
-                <h2>PATROL UNITS <span style="font-size:0.7rem;">&nbsp;• ACTIVE STATUS</span></h2>
-                <span class="status-badge" id="availableCount">0 available</span>
-            </div>
-            <div class="card-body">
-                <div id="unitsContainer" class="units-grid">
-                    <!-- dynamic units injected -->
-                </div>
-                <!-- intelligent suggestion area -->
-                 <div id="smartSuggestion" class="suggestion-panel">
-                    Dispatch AI: Select incident to suggest closest unit
-                 </div>
-            </div>
-         </div>
+    <div id="action-section">
+      <div class="action-title">Dispatch Actions</div>
 
-         <!-- RIGHT: INCEDENTS AND DISPATCH ACTIONS -->
-          <div class="card">
-            <div class="card-header">
-                <h2>LIVE INCIDENTS</h2>
-                <button id="quickNewDemoBtn" class="btn-sm btn-primary" style="background:#2F6470;">+ DEMO INCEDENT</button>
-            </div>
-            <div class="card-body">
-                <div id="incidentsContainer" class="incident-list">
-                    <!-- incident cards -->
-                </div>
-                <hr>
-                <div style="margin-top: 4px;">
-                    <div style="font-weight:500; margin-bottom: 8px;">+ CREATE INCIDENT (MOCK)</div>
-                    <div class="form-incline">
-                        <input type="text" id="incidentLocation" placeholder="Location (e.g., 'Harbor & 12th')" value="Civic Center Plaza">
-                        <select id="incidentPriority">
-                            <option value="high">🔴 CRITICAL / HIGH</option>
-                            <option value="medium">🟠 MODERATE / MEDIUM</option>
-                            <option value="low">🟢 LOW / ROUTINE</option>
-                        </select>
-                        <button id="createIncidentBtn" class="btn-sm btn-primary" style="background:#00758c;">DISPATCH NEW</button>
-                    </div>
-                </div>
-<div class="log-area" id="systemMessage" style="margin-top: 18px;">
-                    ⚡ Ready | Simulated closest-unit algorithm active
-                </div>
-            </div>
-        </div>
+      <div class="context-panel" id="context-panel">
+        Select an incident and unit to dispatch.
+      </div>
+
+      <div id="dispatch-panel">
+        <div class="dispatch-info" id="dispatch-info">—</div>
+        <button class="btn btn-dispatch" id="btn-dispatch" onclick="doDispatch()">◈ DISPATCH UNIT</button>
+      </div>
+
+      <button class="btn btn-close-inc" id="btn-close" onclick="doClose()" disabled>✓ CLOSE INCIDENT</button>
     </div>
+
+    <div id="log-section">
+      <div class="panel-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <span class="panel-title">Dispatch Log</span>
+      </div>
+      <div id="log-list"></div>
+    </div>
+  </div>
 </div>
 
+<!-- NEW INCIDENT MODAL -->
+<div id="modal-overlay">
+  <div id="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">New Incident</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Location / Address</label>
+        <input class="form-input" id="f-location" type="text" placeholder="Market & 8th St">
+      </div>
+      <div class="form-group" style="flex:0 0 120px;">
+        <label class="form-label">Priority</label>
+        <select class="form-select" id="f-priority">
+          <option value="high">HIGH</option>
+          <option value="medium" selected>MEDIUM</option>
+          <option value="low">LOW</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description / Nature of Call</label>
+      <textarea class="form-textarea" id="f-desc" placeholder="10-50 Traffic Collision — injuries reported..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Latitude</label>
+        <input class="form-input" id="f-lat" type="text" placeholder="37.7749">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Longitude</label>
+        <input class="form-input" id="f-lng" type="text" placeholder="-122.4194">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">CANCEL</button>
+      <button class="btn btn-dispatch" onclick="submitIncident()">⚡ CREATE INCIDENT</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
 <script>
-    // API Configuration
-    const API_BASE_URL = window.location.origin + '/api';
-    
-    // State management
-    let units = [];
-    let incidents = [];
-    
-    // Helper functions
-    function systemNotify(msg, type = "info") {
-        const logDiv = document.getElementById("systemMessage");
-        if (logDiv) {
-            const timeStr = new Date().toLocaleTimeString();
-            const prefix = type === "error" ? "❌" : type === "warning" ? "⚠️" : "📡";
-            logDiv.innerHTML = `${prefix} ${timeStr} | ${msg}<br>${logDiv.innerHTML.slice(0, 400)}`;
-        }
-        console.log(`[DISPATCH] ${msg}`);
+/* ─── DEMO DATA ──────────────────────────────────────────── */
+// Map SVG coordinate space (0–100 percentage)
+let state = {
+  incidents: [
+    { id:'CAD-101', location:'Market & 8th St',    priority:'high',   status:'pending',  lat:37.7780, lng:-122.4120, description:'10-50 Traffic collision with injuries — multiple vehicles', assigned_unit_id:null,    created_at: new Date(Date.now()-12*60000) },
+    { id:'CAD-102', location:'Golden Gate Park',   priority:'low',    status:'assigned', lat:37.7690, lng:-122.4830, description:'Suspicious person — dark hoodie, refusing to leave', assigned_unit_id:'E-241',  created_at: new Date(Date.now()-28*60000) },
+    { id:'CAD-103', location:'Mission & 16th',     priority:'medium', status:'pending',  lat:37.7650, lng:-122.4190, description:'415 Noise complaint — large gathering, music', assigned_unit_id:null,    created_at: new Date(Date.now()-5*60000)  },
+    { id:'CAD-104', location:'Embarcadero Pier 39',priority:'medium', status:'assigned', lat:37.8090, lng:-122.4098, description:'10-31 Shoplifting in progress — suspect on scene', assigned_unit_id:'R-972', created_at: new Date(Date.now()-45*60000) },
+  ],
+  units: [
+    { id:'E-241', name:'Sgt. Vasquez',  status:'enroute',      lat:37.7749, lng:-122.4194, beat:'CENTRAL'  },
+    { id:'M-809', name:'Ofc. Park',     status:'available',    lat:37.7695, lng:-122.4130, beat:'MISSION'  },
+    { id:'K-117', name:'Ofc. Reyes',    status:'available',    lat:37.7800, lng:-122.4300, beat:'NOBE'     },
+    { id:'T-554', name:'Ofc. Delgado',  status:'outofservice', lat:37.7660, lng:-122.4250, beat:'SOMA'     },
+    { id:'R-972', name:'Det. Chen',     status:'onscene',      lat:37.8090, lng:-122.4098, beat:'WHARF'    },
+    { id:'D-301', name:'Ofc. Kowalski', status:'available',    lat:37.7712, lng:-122.4410, beat:'WEST ADD' },
+  ],
+  selectedIncident: null,
+  selectedUnit: null,
+  todayCount: 6,
+  nextId: 105
+};
+
+/* ─── MAP PROJECTION ─────────────────────────────────────── */
+// Map our lat/lng range to SVG percentage space
+const MAP = {
+  latMin: 37.740, latMax: 37.820,
+  lngMin: -122.510, lngMax: -122.390,
+  toX(lng) { return ((lng - this.lngMin) / (this.lngMax - this.lngMin) * 85 + 5).toFixed(1) + '%'; },
+  toY(lat) { return ((1 - (lat - this.latMin) / (this.latMax - this.latMin)) * 80 + 8).toFixed(1) + '%'; }
+};
+
+/* ─── CLOCK ──────────────────────────────────────────────── */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ─── HEADER STATS ───────────────────────────────────────── */
+function updateHeader() {
+  const active = state.incidents.length;
+  const avail  = state.units.filter(u => u.status === 'available').length;
+  document.getElementById('hdr-incidents').textContent = active;
+  document.getElementById('hdr-available').textContent = avail;
+  document.getElementById('hdr-total').textContent     = state.units.length;
+  document.getElementById('hdr-today').textContent     = state.todayCount;
+  document.getElementById('inc-count').textContent     = active;
+  document.getElementById('unit-count').textContent    = state.units.length;
+}
+
+/* ─── INCIDENT LIST ──────────────────────────────────────── */
+function renderIncidents() {
+  const el = document.getElementById('incident-list');
+  const sorted = [...state.incidents].sort((a,b) => {
+    const p = {high:0, medium:1, low:2};
+    return p[a.priority] - p[b.priority];
+  });
+  el.innerHTML = '';
+  sorted.forEach((inc, i) => {
+    const age = Math.floor((Date.now() - new Date(inc.created_at)) / 60000);
+    const ageStr = age < 60 ? `${age}m ago` : `${Math.floor(age/60)}h ${age%60}m`;
+    const sel = state.selectedIncident?.id === inc.id ? ' selected' : '';
+    const div = document.createElement('div');
+    div.className = `incident-card ${inc.priority} ${inc.status}${sel}`;
+    div.style.animationDelay = (i * 0.05) + 's';
+    div.innerHTML = `
+      <div class="inc-row1">
+        <span class="inc-id">${inc.id}</span>
+        <span class="priority-badge ${inc.priority}">${inc.priority.toUpperCase()}</span>
+        <span class="status-badge ${inc.status}">${inc.status.toUpperCase()}</span>
+      </div>
+      <div class="inc-location">${inc.location}</div>
+      <div class="inc-desc">${inc.description}</div>
+      <div class="inc-row3">
+        ${inc.assigned_unit_id ? `<span class="inc-unit">${inc.assigned_unit_id}</span>` : ''}
+        <span class="inc-time">${ageStr}</span>
+      </div>`;
+    div.onclick = () => selectIncident(inc.id);
+    el.appendChild(div);
+  });
+}
+
+/* ─── UNIT LIST ──────────────────────────────────────────── */
+function renderUnits() {
+  const el = document.getElementById('unit-list');
+  el.innerHTML = '';
+  state.units.forEach((u, i) => {
+    const sel = state.selectedUnit?.id === u.id ? ' selected' : '';
+    const div = document.createElement('div');
+    div.className = `unit-card${sel}`;
+    div.style.animationDelay = (i * 0.04) + 's';
+    div.innerHTML = `
+      <div class="unit-status-dot ${u.status}"></div>
+      <div class="unit-info">
+        <div class="unit-id">${u.id}</div>
+        <div class="unit-name">${u.name}</div>
+        <div class="unit-beat">${u.beat}</div>
+      </div>
+      <div class="unit-status-label ${u.status}">${u.status.toUpperCase()}</div>`;
+    div.onclick = () => selectUnit(u.id);
+    el.appendChild(div);
+  });
+}
+
+/* ─── MAP RENDERING ──────────────────────────────────────── */
+const STATUS_COLORS = {
+  available: '#00ff88', enroute: '#00d4ff', onscene: '#ffaa00', outofservice: '#5a7099'
+};
+const PRIORITY_COLORS = { high: '#ff3355', medium: '#ffaa00', low: '#00ff88' };
+
+function renderMap() {
+  const unitsG = document.getElementById('map-markers');
+  const incG   = document.getElementById('map-incidents');
+  unitsG.innerHTML = '';
+  incG.innerHTML = '';
+
+  // Render incidents
+  state.incidents.forEach(inc => {
+    const x = MAP.toX(inc.lng);
+    const y = MAP.toY(inc.lat);
+    const col = PRIORITY_COLORS[inc.priority];
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'map-incident-marker');
+    g.setAttribute('transform', `translate(0,0)`);
+    g.onclick = () => selectIncident(inc.id);
+    g.innerHTML = `
+      <circle cx="${x}" cy="${y}" r="12" fill="none" stroke="${col}" stroke-width="0.5" opacity="0.3" class="marker-pulse" style="transform-box:fill-box;transform-origin:center"/>
+      <circle cx="${x}" cy="${y}" r="8" fill="none" stroke="${col}" stroke-width="0.5" opacity="0.2" class="marker-pulse2" style="transform-box:fill-box;transform-origin:center"/>
+      <polygon points="${x},${parseFloat(y)-10} ${parseFloat(x)-6},${parseFloat(y)+4} ${parseFloat(x)+6},${parseFloat(y)+4}"
+        fill="${col}" opacity="0.9" filter="url(#glow-filter)"/>
+      <circle cx="${x}" cy="${y}" r="3" fill="${col}"/>
+      <text x="${parseFloat(x)+10}" y="${parseFloat(y)+4}" font-family="Share Tech Mono,monospace" font-size="9" fill="${col}" opacity="0.9">${inc.id}</text>`;
+    incG.appendChild(g);
+  });
+
+  // Render units
+  state.units.forEach(u => {
+    const x = MAP.toX(u.lng);
+    const y = MAP.toY(u.lat);
+    const col = STATUS_COLORS[u.status];
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'map-unit-marker');
+    g.onclick = () => selectUnit(u.id);
+    g.innerHTML = `
+      ${u.status === 'available' ? `<circle cx="${x}" cy="${y}" r="14" fill="none" stroke="${col}" stroke-width="0.5" opacity="0.2" class="marker-pulse" style="transform-box:fill-box;transform-origin:center"/>` : ''}
+      <rect x="${parseFloat(x)-7}" y="${parseFloat(y)-7}" width="14" height="14"
+        fill="${col}" fill-opacity="0.15" stroke="${col}" stroke-width="1.5"
+        rx="2" filter="url(#glow-filter)"/>
+      <rect x="${parseFloat(x)-3}" y="${parseFloat(y)-3}" width="6" height="6"
+        fill="${col}" rx="1"/>
+      <text x="${parseFloat(x)+10}" y="${parseFloat(y)+4}" font-family="Share Tech Mono,monospace" font-size="9" fill="${col}" opacity="0.8">${u.id}</text>`;
+    unitsG.appendChild(g);
+  });
+}
+
+/* ─── SELECTION LOGIC ────────────────────────────────────── */
+function selectIncident(id) {
+  state.selectedIncident = state.incidents.find(i => i.id === id) || null;
+  renderIncidents();
+  renderUnits();
+  updateActionPanel();
+  renderMap();
+  if (state.selectedIncident) {
+    addLog(`Selected incident ${id}`, 'event');
+  }
+}
+
+function selectUnit(id) {
+  const unit = state.units.find(u => u.id === id);
+  if (!unit) return;
+  state.selectedUnit = unit;
+  renderUnits();
+  updateActionPanel();
+  addLog(`Selected unit ${id} — ${unit.name}`, 'event');
+}
+
+function updateActionPanel() {
+  const ctx    = document.getElementById('context-panel');
+  const dp     = document.getElementById('dispatch-panel');
+  const info   = document.getElementById('dispatch-info');
+  const btnD   = document.getElementById('btn-dispatch');
+  const btnC   = document.getElementById('btn-close');
+  const inc    = state.selectedIncident;
+  const unit   = state.selectedUnit;
+
+  btnC.disabled = !inc;
+
+  if (!inc && !unit) {
+    ctx.classList.add('open'); dp.classList.remove('open');
+    ctx.innerHTML = 'Select an <strong>incident</strong> and an available <strong>unit</strong> to dispatch.';
+    return;
+  }
+  if (inc && !unit) {
+    ctx.classList.add('open'); dp.classList.remove('open');
+    ctx.innerHTML = `<strong>${inc.id}</strong> selected.<br>Now select an available unit to dispatch.`;
+    return;
+  }
+  if (!inc && unit) {
+    ctx.classList.add('open'); dp.classList.remove('open');
+    ctx.innerHTML = `<strong>${unit.id}</strong> selected.<br>Now select an incident to respond to.`;
+    return;
+  }
+
+  // Both selected
+  ctx.classList.remove('open'); dp.classList.add('open');
+  const canDispatch = inc.status === 'pending' && unit.status === 'available';
+  btnD.disabled = !canDispatch;
+  info.innerHTML = `
+    INC: <strong>${inc.id}</strong> — ${inc.priority.toUpperCase()} PRIORITY<br>
+    LOC: <strong>${inc.location}</strong><br>
+    UNIT: <strong>${unit.id}</strong> — ${unit.name}<br>
+    STATUS: <strong style="color:${unit.status==='available'?'var(--green)':'var(--red)'}">${unit.status.toUpperCase()}</strong>`;
+}
+
+/* ─── DISPATCH ───────────────────────────────────────────── */
+function doDispatch() {
+  const inc  = state.selectedIncident;
+  const unit = state.selectedUnit;
+  if (!inc || !unit) return;
+  if (inc.status !== 'pending' || unit.status !== 'available') {
+    showToast('Cannot dispatch: check incident/unit status', 'alert');
+    return;
+  }
+
+  inc.status = 'assigned';
+  inc.assigned_unit_id = unit.id;
+  unit.status = 'enroute';
+
+  addLog(`DISPATCH: ${unit.id} → ${inc.id} @ ${inc.location}`, 'alert');
+  showToast(`${unit.id} dispatched to ${inc.id}`, 'ok');
+
+  state.selectedUnit = null;
+  renderAll();
+}
+
+/* ─── CLOSE INCIDENT ─────────────────────────────────────── */
+function doClose() {
+  const inc = state.selectedIncident;
+  if (!inc) return;
+
+  if (inc.assigned_unit_id) {
+    const unit = state.units.find(u => u.id === inc.assigned_unit_id);
+    if (unit) unit.status = 'available';
+  }
+
+  addLog(`CLOSED: ${inc.id} — ${inc.location}`, 'ok');
+  showToast(`Incident ${inc.id} closed`, 'ok');
+  state.incidents = state.incidents.filter(i => i.id !== inc.id);
+  state.selectedIncident = null;
+  renderAll();
+}
+
+/* ─── NEW INCIDENT MODAL ─────────────────────────────────── */
+function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function submitIncident() {
+  const loc  = document.getElementById('f-location').value.trim();
+  const pri  = document.getElementById('f-priority').value;
+  const desc = document.getElementById('f-desc').value.trim();
+  const lat  = parseFloat(document.getElementById('f-lat').value) || 37.77 + (Math.random()-0.5)*0.04;
+  const lng  = parseFloat(document.getElementById('f-lng').value) || -122.41 + (Math.random()-0.5)*0.06;
+
+  if (!loc) { showToast('Location is required', 'alert'); return; }
+
+  const id = `CAD-${state.nextId++}`;
+  state.incidents.push({
+    id, location: loc, priority: pri, status: 'pending',
+    lat, lng, description: desc || 'No description provided',
+    assigned_unit_id: null, created_at: new Date()
+  });
+  state.todayCount++;
+
+  addLog(`NEW ${pri.toUpperCase()}: ${id} — ${loc}`, pri === 'high' ? 'alert' : 'event');
+  showToast(`Incident ${id} created`, 'ok');
+  closeModal();
+  document.getElementById('f-location').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-lat').value = '';
+  document.getElementById('f-lng').value = '';
+  renderAll();
+}
+
+/* ─── LOG ────────────────────────────────────────────────── */
+const logs = [
+  { time:'00:01', msg:'NEXUS DISPATCH system initialized', type:'ok' },
+  { time:'00:01', msg:'Database connection established',   type:'ok' },
+  { time:'00:02', msg:'6 units loaded into roster',        type:'event' },
+  { time:'00:03', msg:'CAD-101 HIGH PRIORITY — Market & 8th', type:'alert' },
+];
+
+function addLog(msg, type='event') {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit'});
+  logs.unshift({ time, msg, type });
+  if (logs.length > 50) logs.pop();
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById('log-list');
+  el.innerHTML = logs.slice(0,20).map(l =>
+    `<div class="log-entry ${l.type}"><span class="log-time">${l.time}</span><span>${l.msg}</span></div>`
+  ).join('');
+}
+
+/* ─── TOAST ──────────────────────────────────────────────── */
+function showToast(msg, type='info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast${type==='alert' ? ' alert-toast' : type==='ok' ? ' ok-toast' : ''}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ─── RADAR SWEEP (SVG arc path) ─────────────────────────── */
+function updateRadarSweep(angle) {
+  const cx = 50, cy = 50, r = 80; // percent-based approximation
+  // Just rotate the sweep group via CSS animation — already done
+}
+
+/* ─── RENDER ALL ─────────────────────────────────────────── */
+function renderAll() {
+  renderIncidents();
+  renderUnits();
+  renderMap();
+  updateHeader();
+  updateActionPanel();
+}
+
+/* ─── SIMULATED EVENTS ───────────────────────────────────── */
+// Simulate unit position drift over time
+setInterval(() => {
+  state.units.forEach(u => {
+    if (u.status !== 'outofservice') {
+      u.lat += (Math.random() - 0.5) * 0.001;
+      u.lng += (Math.random() - 0.5) * 0.001;
     }
-    
-    // Fetch data from backend
-    async function fetchUnits() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/units`);
-            if (!response.ok) throw new Error('Failed to fetch units');
-            units = await response.json();
-            renderUnits();
-            updateAvailableCount();
-        } catch (error) {
-            console.error('Error fetching units:', error);
-            systemNotify('Backend not available - using fallback data', 'warning');
-            // Fallback to mock data
-            units = [
-                { id: "E-241", name: "Sgt. Vasquez", status: "available", lat: 37.7749, lng: -122.4194, beat: "CENTRAL" },
-                { id: "M-809", name: "Ofc. Park", status: "available", lat: 37.7695, lng: -122.4130, beat: "MISSION" },
-                { id: "K-117", name: "Ofc. Reyes", status: "enroute", lat: 37.7800, lng: -122.4300, beat: "NOBE" },
-                { id: "T-554", name: "Ofc. Delgado", status: "outofservice", lat: 37.7660, lng: -122.4250, beat: "SOMA" }
-            ];
-            renderUnits();
-        }
-    }
-    
-    async function fetchIncidents() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/incidents`);
-            if (!response.ok) throw new Error('Failed to fetch incidents');
-            incidents = await response.json();
-            renderIncidents();
-        } catch (error) {
-            console.error('Error fetching incidents:', error);
-            incidents = [
-                { id: "CAD-101", location: "Market & 8th", priority: "high", assigned_unit_id: null, status: "pending", created_at: new Date() },
-                { id: "CAD-102", location: "Golden Gate Park", priority: "low", assigned_unit_id: "E-241", status: "assigned", created_at: new Date() }
-            ];
-            renderIncidents();
-        }
-    }
-    
-    async function updateUnitStatus(unitId, status) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/units/${unitId}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-            
-            if (!response.ok) throw new Error('Failed to update status');
-            const updatedUnit = await response.json();
-            systemNotify(`Unit ${unitId} status changed to ${status}`);
-            await fetchUnits();
-            await fetchIncidents(); // Refresh incidents as assignments may change
-        } catch (error) {
-            console.error('Error updating status:', error);
-            // Fallback for demo
-            const unit = units.find(u => u.id === unitId);
-            if (unit) unit.status = status;
-            renderUnits();
-            systemNotify(`Unit ${unitId} status changed to ${status} (local only)`, 'warning');
-        }
-    }
-    
-    async function createIncident(location, priority) {
-        const coords = getLocationCoords(location);
-        try {
-            const response = await fetch(`${API_BASE_URL}/incidents`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    location,
-                    priority,
-                    lat: coords.lat,
-                    lng: coords.lng,
-                    description: `${priority} priority call at ${location}`,
-                    dispatcher: 'dispatcher1'
-                })
-            });
-            
-            if (!response.ok) throw new Error('Failed to create incident');
-            const newIncident = await response.json();
-            systemNotify(`${priority.toUpperCase()} incident created: ${location} (${newIncident.id})`);
-            await fetchIncidents();
-            refreshSuggestion();
-        } catch (error) {
-            console.error('Error creating incident:', error);
-            systemNotify('Failed to create incident - backend may be offline', 'error');
-        }
-    }
-    
-    async function assignUnitToIncident(incidentId, unitId) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/assign`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    unit_id: unitId,
-                    dispatcher: 'dispatcher1'
-                })
-            });
-            
-            if (!response.ok) throw new Error('Failed to assign unit');
-            await response.json();
-            systemNotify(`Unit ${unitId} assigned to incident ${incidentId}`);
-            await Promise.all([fetchUnits(), fetchIncidents()]);
-            refreshSuggestion();
-        } catch (error) {
-            console.error('Error assigning unit:', error);
-            systemNotify('Failed to assign unit - try again', 'error');
-        }
-    }
-    
-    async function closeIncident(incidentId) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/close`, {
-                method: 'PATCH'
-            });
-            
-            if (!response.ok) throw new Error('Failed to close incident');
-            systemNotify(`Incident ${incidentId} closed`);
-            await Promise.all([fetchUnits(), fetchIncidents()]);
-            refreshSuggestion();
-        } catch (error) {
-            console.error('Error closing incident:', error);
-            // Fallback for demo
-            const index = incidents.findIndex(i => i.id === incidentId);
-            if (index !== -1) {
-                incidents.splice(index, 1);
-                renderIncidents();
-                systemNotify(`Incident ${incidentId} closed (local only)`, 'warning');
-            }
-        }
-    }
-    
-    async function suggestAndAssign(incidentId) {
-        const incident = incidents.find(i => i.id === incidentId);
-        if (!incident) return;
-        
-        try {
-            const coords = getLocationCoords(incident.location);
-            const response = await fetch(`${API_BASE_URL}/units/closest/${coords.lat}/${coords.lng}`);
-            const suggestedUnit = await response.json();
-            
-            if (suggestedUnit) {
-                if (confirm(`Recommend assigning ${suggestedUnit.name} (${suggestedUnit.id}) to ${incident.location}?`)) {
-                    await assignUnitToIncident(incident.id, suggestedUnit.id);
-                }
-            } else {
-                systemNotify("No available units to assign at this moment.", "warning");
-            }
-        } catch (error) {
-            console.error('Error finding closest unit:', error);
-            // Fallback logic
-            const availableUnits = units.filter(u => u.status === "available");
-            if (availableUnits.length > 0) {
-                if (confirm(`Assign ${availableUnits[0].name} to this incident?`)) {
-                    await assignUnitToIncident(incident.id, availableUnits[0].id);
-                }
-            } else {
-                systemNotify("No available units!", "warning");
-            }
-        }
-    }
-    
-    function getLocationCoords(location) {
-        const map = {
-            "Civic Center Plaza": { lat: 37.7795, lng: -122.4180 },
-            "Harbor & 12th": { lat: 37.7620, lng: -122.3880 },
-            "Market & 8th": { lat: 37.7780, lng: -122.4120 },
-            "Golden Gate Park": { lat: 37.7690, lng: -122.4830 },
-            "Mission & 24th": { lat: 37.7525, lng: -122.4185 },
-            "Fisherman's Wharf": { lat: 37.8080, lng: -122.4170 },
-            "Bayview Station": { lat: 37.7320, lng: -122.3870 }
-        };
-        if (map[location]) return map[location];
-        return { lat: 37.7700, lng: -122.4200 };
-    }
-    
-    function unitArriveScene(unitId, incidentId = null) {
-        updateUnitStatus(unitId, 'onscene');
-        systemNotify(`Unit ${unitId} arrived on scene`);
-    }
-    
-    // Render functions
-    function renderUnits() {
-        const container = document.getElementById("unitsContainer");
-        if (!container) return;
-        container.innerHTML = "";
-        for (let unit of units) {
-            let statusClass = "";
-            if (unit.status === "available") statusClass = "status-available";
-            else if (unit.status === "enroute") statusClass = "status-enroute";
-            else if (unit.status === "onscene") statusClass = "status-onscene";
-            else statusClass = "status-outofservice";
-            
-            const tile = document.createElement("div");
-            tile.className = "unit-tile";
-            tile.innerHTML = `
-                <div class="unit-info">
-                    <div class="unit-name">${unit.name} <span style="font-size:0.7rem;">${unit.id}</span></div>
-                    <div class="unit-badge">${unit.beat || 'UNKNOWN'} ▸ ${unit.lat?.toFixed(3) || '0'},${unit.lng?.toFixed(3) || '0'}</div>
-                </div>
-                <div style="display:flex; align-items:center; gap: 12px; flex-wrap:wrap;">
-                    <span class="status-chip ${statusClass}">${unit.status.toUpperCase()}</span>
-                    <div class="action-group">
-                        <button class="btn-sm" onclick="window.updateUnitStatus('${unit.id}','available')">AVAIL</button>
-                        <button class="btn-sm" onclick="window.updateUnitStatus('${unit.id}','outofservice')">OFF</button>
-                        ${unit.status === "enroute" ? `<button class="btn-sm btn-primary" onclick="window.unitArriveScene('${unit.id}')">🚓 ON SCENE</button>` : ''}
-                    </div>
-                </div>
-            `;
-            container.appendChild(tile);
-        }
-        updateAvailableCount();
-    }
-    
-    function renderIncidents() {
-        const container = document.getElementById("incidentsContainer");
-        if (!container) return;
-        container.innerHTML = "";
-        if (incidents.length === 0) {
-            container.innerHTML = `<div style="padding: 30px; text-align:center; background:#0E1A1F; border-radius: 28px;">📭 NO ACTIVE CALLS · SYSTEM READY</div>`;
-            return;
-        }
-        for (let inc of incidents) {
-            const assignedUnit = inc.assigned_unit_id ? units.find(u => u.id === inc.assigned_unit_id) : null;
-            let priorityClass = inc.priority === "high" ? "priority-high" : (inc.priority === "medium" ? "priority-medium" : "priority-low");
-            const timeStr = inc.created_at ? new Date(inc.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "now";
-            const cardDiv = document.createElement("div");
-            cardDiv.className = `incident-card ${priorityClass}`;
-            cardDiv.innerHTML = `
-                <div class="incident-details">
-                    <div class="incident-title">
-                        <strong>${inc.id}</strong> <span class="incident-loc">📍 ${inc.location}</span>
-                        <span style="font-size:0.65rem; background:#1B3940; padding:2px 8px; border-radius:30px;">${inc.priority}</span>
-                    </div>
-                    <div class="incident-meta">
-                        <span>🕒 ${timeStr}</span>
-                        <span>📌 ${inc.status === "assigned" ? `ASSIGNED TO ${assignedUnit?.name || "—"}` : "PENDING DISPATCH"}</span>
-                    </div>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    ${!inc.assigned_unit_id ? `<button class="btn-incident" onclick="window.suggestAndAssign('${inc.id}')">🎯 SUGGEST & ASSIGN</button>` : 
-                      `<button class="btn-incident" onclick="window.unitArriveScene('${inc.assigned_unit_id}', '${inc.id}')">🚔 MARK ARRIVAL</button>`}
-                    <button class="btn-incident btn-warning" onclick="window.closeIncident('${inc.id}')">✔️ CLOSE</button>
-                </div>
-            `;
-            container.appendChild(cardDiv);
-        }
-    }
-    
-    function updateAvailableCount() {
-        const count = units.filter(u => u.status === "available").length;
-        const el = document.getElementById("availableCount");
-        if (el) el.innerText = `${count} unit${count !== 1 ? 's' : ''} available`;
-    }
-    
-    function refreshSuggestion() {
-        const pendingInc = incidents.find(i => i.status === "pending" && !i.assigned_unit_id);
-        const panel = document.getElementById("smartSuggestion");
-        if (pendingInc) {
-            panel.innerHTML = `🎯 PENDING: ${pendingInc.location} (${pendingInc.priority}) → Click "SUGGEST & ASSIGN" on incident`;
-        } else if (incidents.length > 0) {
-            panel.innerHTML = `📋 All incidents assigned. Monitor unit status.`;
-        } else {
-            panel.innerHTML = `✅ No active incidents — system idle. Add a mock incident.`;
-        }
-    }
-    
-    function updateClock() {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
-        const clockDiv = document.getElementById("liveClock");
-        if (clockDiv) clockDiv.innerText = timeStr;
-    }
-    
-    // Auto-refresh every 5 seconds
-    let refreshInterval;
-    function startAutoRefresh() {
-        if (refreshInterval) clearInterval(refreshInterval);
-        refreshInterval = setInterval(async () => {
-            await Promise.all([fetchUnits(), fetchIncidents()]);
-            refreshSuggestion();
-        }, 5000);
-    }
-    
-    // Initialize
-    async function init() {
-        updateClock();
-        setInterval(updateClock, 1000);
-        await Promise.all([fetchUnits(), fetchIncidents()]);
-        refreshSuggestion();
-        startAutoRefresh();
-        systemNotify("Nexus Dispatch connected to backend API", "info");
-    }
-    
-    // Event listeners
-    document.getElementById("createIncidentBtn")?.addEventListener("click", () => {
-        const location = document.getElementById("incidentLocation").value.trim();
-        const priority = document.getElementById("incidentPriority").value;
-        if (location === "") {
-            systemNotify("Please enter a valid location.", "warning");
-            return;
-        }
-        createIncident(location, priority);
-    });
-    
-    document.getElementById("quickNewDemoBtn")?.addEventListener("click", () => {
-        const demoLocations = ["Harbor & 12th", "Mission & 24th", "Bayview Station", "Fisherman's Wharf"];
-        const randLoc = demoLocations[Math.floor(Math.random() * demoLocations.length)];
-        const randPrio = ["high", "medium", "low"][Math.floor(Math.random() * 3)];
-        createIncident(randLoc, randPrio);
-    });
-    
-    // Expose globals
-    window.updateUnitStatus = updateUnitStatus;
-    window.closeIncident = closeIncident;
-    window.unitArriveScene = unitArriveScene;
-    window.suggestAndAssign = suggestAndAssign;
-    window.assignUnitToIncident = assignUnitToIncident;
-    
-    // Start the application
-    init();
+  });
+  renderMap();
+}, 4000);
+
+// Simulate occasional random log entries
+const radioChatter = [
+  ["M-809 to dispatch, 10-8, back in service", 'ok'],
+  ["K-117: minor fender bender on Fell, no injuries", 'event'],
+  ["D-301: foot patrol complete, beat clear", 'event'],
+  ["Dispatch: weather advisory — fog advisory in effect", 'warn'],
+  ["E-241: arrived at scene, requesting backup", 'alert'],
+  ["M-809: clear from last call", 'ok'],
+];
+let chatIdx = 0;
+setInterval(() => {
+  const [msg, type] = radioChatter[chatIdx % radioChatter.length];
+  addLog(msg, type);
+  chatIdx++;
+}, 12000);
+
+// Close button updates
+document.getElementById('btn-close').addEventListener('click', () => {});
+
+/* ─── INIT ───────────────────────────────────────────────── */
+renderAll();
+renderLog();
 </script>
 </body>
 </html>
